@@ -12,6 +12,7 @@ project(larrecodnn LANGUAGES CXX)
 
 # cetbuildtools contains our cmake modules
 find_package(cetbuildtools REQUIRED)
+find_package(Threads)
 
 list(APPEND CMAKE_MODULE_PATH $ENV{CANVAS_ROOT_IO_DIR}/Modules $ENV{ART_DIR}/Modules)
 
@@ -51,7 +52,7 @@ include(ArtDictionary)
 include(ArtMake)
 include(BuildPlugins)
 
-if(( DEFINED ENV{TENSORFLOW_DIR} ) OR ( DEFINED ENV{TRTIS_CLIENTS_DIR} ))
+if(( DEFINED ENV{TENSORFLOW_DIR} ) OR ( DEFINED ENV{TRITON_DIR} ))
   find_ups_product( protobuf )
   cet_find_library(PROTOBUF NAMES protobuf PATHS ENV PROTOBUF_LIB NO_DEFAULT_PATH )
 endif ()
@@ -62,8 +63,8 @@ if( DEFINED ENV{TENSORFLOW_DIR} )
   cet_find_library(TENSORFLOW NAMES tensorflow-core PATHS ENV TENSORFLOW_LIB NO_DEFAULT_PATH )
 endif ()
 # trtis_clients is optional
-if( DEFINED ENV{TRTIS_CLIENTS_DIR} )
-  find_ups_product(trtis_clients)
+if( DEFINED ENV{TRITON_DIR} )
+  find_ups_product(triton)
 endif ()
 
 # source

@@ -1,5 +1,5 @@
-include_directories($ENV{TRTIS_CLIENTS_INC})
-cet_find_library(TRTIS_CLIENTS_LIBRARY NAMES request PATHS $ENV{TRTIS_CLIENTS_LIB})
+include_directories($ENV{TRITON_INC})
+cet_find_library(TRITON_LIB NAMES request PATHS $ENV{TRITON_LIB})
 
 art_make(
           TOOL_LIBRARIES
@@ -7,7 +7,7 @@ art_make(
           ROOT::Core
           canvas
           ${MF_MESSAGELOGGER}
-	  ${TRTIS_CLIENTS_LIBRARY}
+	  ${TRITON_LIB}
         )
 
 install_source()

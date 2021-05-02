@@ -6,10 +6,8 @@
 #include "art/Utilities/ToolMacros.h"
 #include "larrecodnn/ImagePatternAlgs/ToolInterfaces/IPointIdAlg.h"
 
-// Nvidia TensorRT inference server client includes
-#include "trtis_clients/model_config.pb.h"
-#include "trtis_clients/request_grpc.h"
-#include "trtis_clients/request_http.h"
+// Nvidia Triton inference server client includes
+#include "grpc_client.h"
 
 namespace ni = nvidia::inferenceserver;
 namespace nic = nvidia::inferenceserver::client;
@@ -29,6 +27,13 @@ namespace PointIdAlgTools {
     std::string fTrtisURL;
     bool fTrtisVerbose;
     int64_t fTrtisModelVersion;
+
+    std::unique_ptr<nic::InferenceServerGrpcClient> triton_client;
+    inference::ModelMetadataResponse triton_modmet;
+    inference::ModelConfigResponse triton_modcfg;
+    std::vector<int64_t> triton_inpshape;
+    nic::InferOptions triton_options("");
+
 
     std::unique_ptr<nic::InferContext> ctx; // tRTis context
     std::shared_ptr<nic::InferContext::Input> model_input;
@@ -66,19 +71,34 @@ namespace PointIdAlgTools {
       fTrtisModelVersion = -1;
     }
 
-    // ... Create the inference context for the specified model.
-    auto err = nic::InferGrpcContext::Create(
-      &ctx, fTrtisURL, fTrtisModelName, fTrtisModelVersion, fTrtisVerbose);
+    // ... Create the Triton inference client
+    auto err = nic::InferenceServerGrpcClient::Create(&triton_client, fTrtisURL, fTrtisVerbose);
     if (!err.IsOk()) {
       throw cet::exception("PointIdAlgTrtis")
-        << "unable to create tRTis inference context: " << err << std::endl;
+            << "error: unable to create client for inference: " << err << std::endl;
     }
 
-    // ... Get the specified model input
-    err = ctx->GetInput("main_input", &model_input);
+    // ... Get the model metadata and config information
+    err = triton_client->ModelMetadata(&triton_modmet, fTrtisModelName, fTrtisModelVersion);
     if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis") << "unable to get tRTis input: " << err << std::endl;
+      throw cet::exception("PointIdAlgTrtis")
+            << "error: failed to get model metadata: " << err << std::endl;
     }
+    err = triton_client->ModelConfig(&triton_modcfg, fTrtisModelName, fTrtisModelVersion);
+    if (!err.IsOk()) {
+      throw cet::exception("PointIdAlgTrtis")
+            << "error: failed to get model config: " << err << std::endl;
+    }
+
+    // ... Set up shape vector needed when creating inference input
+    triton_inpshape.push_back(1);	// initialize batch_size to 1
+    triton_inpshape.push_back(model_metadata.inputs(0).shape(1));
+    triton_inpshape.push_back(model_metadata.inputs(0).shape(2));
+    triton_inpshape.push_back(model_metadata.inputs(0).shape(3));
+
+    // ... Set up Triton inference client options
+    triton_options.model_name_ = fTrtisModelName;
+    triton_options.model_version_ = fTrtisModelVersion;
 
     mf::LogInfo("PointIdAlgTrtis") << "url: " << fTrtisURL;
     mf::LogInfo("PointIdAlgTrtis") << "model name: " << fTrtisModelName;
@@ -96,29 +116,23 @@ namespace PointIdAlgTools {
   {
     size_t nrows = inp2d.size(), ncols = inp2d.front().size();
 
-    // ~~~~ Configure context options
+    triton_inpshape[0] = 1;	// set batch size
 
-    std::unique_ptr<nic::InferContext::Options> options;
-    auto err = nic::InferContext::Options::Create(&options);
+    // ~~~~ Initialize the inputs
+
+    nic::InferInput* triton_input;
+    auto err = nic::InferInput::Create(
+    	&triton_input, triton_modmet.inputs(0).name(), triton_inpshape, triton_modmet.inputs(0).datatype() );
     if (!err.IsOk()) {
       throw cet::exception("PointIdAlgTrtis")
-        << "failed initializing tRTis infer options: " << err << std::endl;
+        << "unable to get input: " << err << std::endl;
     }
-
-    options->SetBatchSize(1);                   // set batch size
-    for (const auto& output : ctx->Outputs()) { // request all output tensors
-      options->AddRawResult(output);
-    }
-
-    err = ctx->SetRunOptions(*options);
-    if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis")
-        << "unable to set tRTis infer options: " << err << std::endl;
-    }
+    std::shared_ptr<nic::InferInput> triton_input_ptr(input);
+    std::vector<nic::InferInput*> triton_inputs = {triton_input_ptr.get()};
 
     // ~~~~ Register the mem address of 1st byte of image and #bytes in image
 
-    err = model_input->Reset();
+    err = triton_input_ptr->Reset();
     if (!err.IsOk()) {
       throw cet::exception("PointIdAlgTrtis")
         << "failed resetting tRTis model input: " << err << std::endl;
@@ -131,42 +145,39 @@ namespace PointIdAlgTools {
     for (size_t ir = 0; ir < nrows; ++ir) {
       std::copy(inp2d[ir].begin(), inp2d[ir].end(), fa.begin() + (ir * ncols));
     }
-    err = model_input->SetRaw(reinterpret_cast<uint8_t*>(fa.data()), sbuff_byte_size);
+    err = triton_input_ptr->AppendRaw(reinterpret_cast<uint8_t*>(fa.data()), sbuff_byte_size);
     if (!err.IsOk()) {
       throw cet::exception("PointIdAlgTrtis") << "failed setting tRTis input: " << err << std::endl;
     }
 
     // ~~~~ Send inference request
 
-    std::map<std::string, std::unique_ptr<nic::InferContext::Result>> results;
+    nic::InferResult* results;
 
-    err = ctx->Run(&results);
+    err = triton_client->Infer(&results, triton_options, triton_inputs);
     if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis")
-        << "failed sending tRTis synchronous infer request: " << err << std::endl;
+      throw cet::exception("PointIdAlgTrtis") 
+         << "failed sending tRTis synchronous infer request: " << err << std::endl;
     }
+    std::shared_ptr<nic::InferResult> results_ptr;
+    results_ptr.reset(results);
 
     // ~~~~ Retrieve inference results
 
     std::vector<float> out;
-    std::map<std::string, std::unique_ptr<nic::InferContext::Result>>::iterator itRes =
-      results.begin();
 
-    // .. loop over the outputs
-    while (itRes != results.end()) {
-      const std::unique_ptr<nic::InferContext::Result>& result = itRes->second;
-      const uint8_t* rbuff;   // pointer to buffer holding result bytes
-      size_t rbuff_byte_size; // size of result buffer in bytes
-      result->GetRaw(0, &rbuff, &rbuff_byte_size);
-      const float* prb = reinterpret_cast<const float*>(rbuff);
+    const float *prb0;
+    size_t rbuff0_byte_size;	    // size of result buffer in bytes
+    results_ptr->RawData(model_metadata.outputs(0).name(), (const uint8_t**)&prb0, &rbuff0_byte_size);
+    size_t ncat0 = rbuff0_byte_size/(*sizeof(float));
 
-      // .. loop over each class in output
-      size_t ncat = rbuff_byte_size / sizeof(float);
-      for (unsigned int j = 0; j < ncat; j++) {
-        out.push_back(prb[j]);
-      }
-      itRes++;
-    }
+    const float *prb1;
+    size_t rbuff1_byte_size;	    // size of result buffer in bytes
+    results_ptr->RawData(model_metadata.outputs(1).name(), (const uint8_t**)&prb1, &rbuff1_byte_size);
+    size_t ncat1 = rbuff1_byte_size/(sizeof(float));
+
+    for(unsigned j = 0; j < ncat0; j++) out.push_back(*(prb0 + j ));
+    for(unsigned j = 0; j < ncat1; j++) out.push_back(*(prb1 + j ));
 
     return out;
   }
@@ -184,29 +195,22 @@ namespace PointIdAlgTools {
     size_t usamples = samples;
     size_t nrows = inps.front().size(), ncols = inps.front().front().size();
 
-    // ~~~~ Configure context options
+    triton_inpshape[0] = usamples;	// set batch size
 
-    std::unique_ptr<nic::InferContext::Options> options;
-    auto err = nic::InferContext::Options::Create(&options);
+    // ~~~~ Initialize the inputs
+
+    nic::InferInput* triton_input;
+    auto err = nic::InferInput::Create(
+    	&triton_input, triton_modmet.inputs(0).name(), shape, triton_modmet.inputs(0).datatype() );
     if (!err.IsOk()) {
       throw cet::exception("PointIdAlgTrtis")
-        << "failed initializing tRTis infer options: " << err << std::endl;
+        << "unable to get input: " << err << std::endl;
     }
-
-    options->SetBatchSize(usamples);            // set batch size
-    for (const auto& output : ctx->Outputs()) { // request all output tensors
-      options->AddRawResult(output);
-    }
-
-    err = ctx->SetRunOptions(*options);
-    if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis")
-        << "unable to set tRTis inference options: " << err << std::endl;
-    }
+    std::shared_ptr<nic::InferInput> triton_input_ptr(input);
+    std::vector<nic::InferInput*> triton_inputs = {triton_input_ptr.get()};
 
     // ~~~~ For each sample, register the mem address of 1st byte of image and #bytes in image
-
-    err = model_input->Reset();
+    err = triton_input_ptr->Reset();
     if (!err.IsOk()) {
       throw cet::exception("PointIdAlgTrtis")
         << "failed resetting tRTis model input: " << err << std::endl;
@@ -220,7 +224,7 @@ namespace PointIdAlgTools {
       for (size_t ir = 0; ir < nrows; ++ir) {
         std::copy(inps[idx][ir].begin(), inps[idx][ir].end(), fa[idx].begin() + (ir * ncols));
       }
-      err = model_input->SetRaw(reinterpret_cast<uint8_t*>(fa[idx].data()), sbuff_byte_size);
+      err = triton_input_ptr->AppendRaw(reinterpret_cast<uint8_t*>(fa[idx].data()), sbuff_byte_size);
       if (!err.IsOk()) {
         throw cet::exception("PointIdAlgTrtis")
           << "failed setting tRTis input: " << err << std::endl;
@@ -229,38 +233,34 @@ namespace PointIdAlgTools {
 
     // ~~~~ Send inference request
 
-    std::map<std::string, std::unique_ptr<nic::InferContext::Result>> results;
+    nic::InferResult* results;
 
-    err = ctx->Run(&results);
+    err = triton_client->Infer(&results, triton_options, triton_inputs);
     if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis")
-        << "failed sending tRTis synchronous infer request: " << err << std::endl;
+      throw cet::exception("PointIdAlgTrtis") 
+         << "failed sending tRTis synchronous infer request: " << err << std::endl;
     }
+    std::shared_ptr<nic::InferResult> results_ptr;
+    results_ptr.reset(results);
 
     // ~~~~ Retrieve inference results
 
     std::vector<std::vector<float>> out;
 
-    for (unsigned int i = 0; i < usamples; i++) {
-      std::map<std::string, std::unique_ptr<nic::InferContext::Result>>::iterator itRes =
-        results.begin();
+    const float *prb0;
+    size_t rbuff0_byte_size;	    // size of result buffer in bytes
+    results_ptr->RawData(model_metadata.outputs(0).name(), (const uint8_t**)&prb0, &rbuff0_byte_size);
+    size_t ncat0 = rbuff0_byte_size/(usamples*sizeof(float));
 
-      // .. loop over the outputs
+    const float *prb1;
+    size_t rbuff1_byte_size;	    // size of result buffer in bytes
+    results_ptr->RawData(model_metadata.outputs(1).name(), (const uint8_t**)&prb1, &rbuff1_byte_size);
+    size_t ncat1 = rbuff1_byte_size/(usamples*sizeof(float));
+
+    for(unsigned i = 0; i < usamples; i++) {
       std::vector<float> vprb;
-      while (itRes != results.end()) {
-        const std::unique_ptr<nic::InferContext::Result>& result = itRes->second;
-        const uint8_t* rbuff;   // pointer to buffer holding result bytes
-        size_t rbuff_byte_size; // size of result buffer in bytes
-        result->GetRaw(i, &rbuff, &rbuff_byte_size);
-        const float* prb = reinterpret_cast<const float*>(rbuff);
-
-        // .. loop over each class in output
-        size_t ncat = rbuff_byte_size / sizeof(float);
-        for (unsigned int j = 0; j < ncat; j++) {
-          vprb.push_back(prb[j]);
-        }
-        itRes++;
-      }
+      for(unsigned j = 0; j < ncat0; j++) vprb.push_back(*(prb0 + i*ncat0 + j ));
+      for(unsigned j = 0; j < ncat1; j++) vprb.push_back(*(prb1 + i*ncat1 + j ));
       out.push_back(vprb);
     }
 

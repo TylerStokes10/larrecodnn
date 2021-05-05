@@ -22,7 +22,7 @@ cet_cmake_env()
 cet_set_compiler_flags(DIAGS CAUTIOUS
   WERROR
   NO_UNDEFINED
-  EXTRA_FLAGS -pedantic -Wno-unused-local-typedefs
+  EXTRA_FLAGS -Wno-unused-local-typedefs
 )
 
 cet_report_compiler_flags()
@@ -60,7 +60,8 @@ endif ()
 if( DEFINED ENV{TENSORFLOW_DIR} )
   # find tensorflow library
   find_ups_product( tensorflow )
-  cet_find_library(TENSORFLOW NAMES tensorflow-core PATHS ENV TENSORFLOW_LIB NO_DEFAULT_PATH )
+  cet_find_library(TENSORFLOW NAMES tensorflow PATHS ENV TENSORFLOW_LIB NO_DEFAULT_PATH )
+  cet_find_library(FOR_TENSORFLOW NAMES tensorflow_framework PATHS ENV TENSORFLOW_LIB NO_DEFAULT_PATH )
 endif ()
 # trtis_clients is optional
 if( DEFINED ENV{TRITON_DIR} )

@@ -26,22 +26,20 @@ namespace PointIdAlgTools {
     std::string fTrtisModelName;
     std::string fTrtisURL;
     bool fTrtisVerbose;
-    int64_t fTrtisModelVersion;
+    std::string fTrtisModelVersion;
 
     std::unique_ptr<nic::InferenceServerGrpcClient> triton_client;
     inference::ModelMetadataResponse triton_modmet;
     inference::ModelConfigResponse triton_modcfg;
-    std::vector<int64_t> triton_inpshape;
-    nic::InferOptions triton_options("");
+    mutable std::vector<int64_t> triton_inpshape;
+    nic::InferOptions triton_options;
 
 
-    std::unique_ptr<nic::InferContext> ctx; // tRTis context
-    std::shared_ptr<nic::InferContext::Input> model_input;
   };
 
   // ------------------------------------------------------
   PointIdAlgTrtis::PointIdAlgTrtis(fhicl::Table<Config> const& table)
-    : img::DataProviderAlg(table())
+    : img::DataProviderAlg(table()), triton_options("")
   {
     // ... Get common config vars
     fNNetOutputs = table().NNetOutputs();
@@ -52,7 +50,6 @@ namespace PointIdAlgTools {
 
     // ... Get "optional" config vars specific to tRTis interface
     std::string s_cfgvr;
-    int64_t i_cfgvr;
     bool b_cfgvr;
     if (table().TrtisModelName(s_cfgvr)) { fTrtisModelName = s_cfgvr; }
     else {
@@ -66,9 +63,9 @@ namespace PointIdAlgTools {
     else {
       fTrtisVerbose = false;
     }
-    if (table().TrtisModelVersion(i_cfgvr)) { fTrtisModelVersion = i_cfgvr; }
+    if (table().TrtisModelVersion(s_cfgvr)) { fTrtisModelVersion = s_cfgvr; }
     else {
-      fTrtisModelVersion = -1;
+      fTrtisModelVersion = "";
     }
 
     // ... Create the Triton inference client
@@ -92,9 +89,9 @@ namespace PointIdAlgTools {
 
     // ... Set up shape vector needed when creating inference input
     triton_inpshape.push_back(1);	// initialize batch_size to 1
-    triton_inpshape.push_back(model_metadata.inputs(0).shape(1));
-    triton_inpshape.push_back(model_metadata.inputs(0).shape(2));
-    triton_inpshape.push_back(model_metadata.inputs(0).shape(3));
+    triton_inpshape.push_back(triton_modmet.inputs(0).shape(1));
+    triton_inpshape.push_back(triton_modmet.inputs(0).shape(2));
+    triton_inpshape.push_back(triton_modmet.inputs(0).shape(3));
 
     // ... Set up Triton inference client options
     triton_options.model_name_ = fTrtisModelName;
@@ -116,7 +113,7 @@ namespace PointIdAlgTools {
   {
     size_t nrows = inp2d.size(), ncols = inp2d.front().size();
 
-    triton_inpshape[0] = 1;	// set batch size
+    triton_inpshape.at(0) = 1;	// set batch size
 
     // ~~~~ Initialize the inputs
 
@@ -127,7 +124,7 @@ namespace PointIdAlgTools {
       throw cet::exception("PointIdAlgTrtis")
         << "unable to get input: " << err << std::endl;
     }
-    std::shared_ptr<nic::InferInput> triton_input_ptr(input);
+    std::shared_ptr<nic::InferInput> triton_input_ptr(triton_input);
     std::vector<nic::InferInput*> triton_inputs = {triton_input_ptr.get()};
 
     // ~~~~ Register the mem address of 1st byte of image and #bytes in image
@@ -168,13 +165,13 @@ namespace PointIdAlgTools {
 
     const float *prb0;
     size_t rbuff0_byte_size;	    // size of result buffer in bytes
-    results_ptr->RawData(model_metadata.outputs(0).name(), (const uint8_t**)&prb0, &rbuff0_byte_size);
-    size_t ncat0 = rbuff0_byte_size/(*sizeof(float));
+    results_ptr->RawData(triton_modmet.outputs(0).name(), (const uint8_t**)&prb0, &rbuff0_byte_size);
+    size_t ncat0 = rbuff0_byte_size/sizeof(float);
 
     const float *prb1;
     size_t rbuff1_byte_size;	    // size of result buffer in bytes
-    results_ptr->RawData(model_metadata.outputs(1).name(), (const uint8_t**)&prb1, &rbuff1_byte_size);
-    size_t ncat1 = rbuff1_byte_size/(sizeof(float));
+    results_ptr->RawData(triton_modmet.outputs(1).name(), (const uint8_t**)&prb1, &rbuff1_byte_size);
+    size_t ncat1 = rbuff1_byte_size/sizeof(float);
 
     for(unsigned j = 0; j < ncat0; j++) out.push_back(*(prb0 + j ));
     for(unsigned j = 0; j < ncat1; j++) out.push_back(*(prb1 + j ));
@@ -195,18 +192,18 @@ namespace PointIdAlgTools {
     size_t usamples = samples;
     size_t nrows = inps.front().size(), ncols = inps.front().front().size();
 
-    triton_inpshape[0] = usamples;	// set batch size
+    triton_inpshape.at(0) = usamples;	// set batch size
 
     // ~~~~ Initialize the inputs
 
     nic::InferInput* triton_input;
     auto err = nic::InferInput::Create(
-    	&triton_input, triton_modmet.inputs(0).name(), shape, triton_modmet.inputs(0).datatype() );
+    	&triton_input, triton_modmet.inputs(0).name(), triton_inpshape, triton_modmet.inputs(0).datatype() );
     if (!err.IsOk()) {
       throw cet::exception("PointIdAlgTrtis")
         << "unable to get input: " << err << std::endl;
     }
-    std::shared_ptr<nic::InferInput> triton_input_ptr(input);
+    std::shared_ptr<nic::InferInput> triton_input_ptr(triton_input);
     std::vector<nic::InferInput*> triton_inputs = {triton_input_ptr.get()};
 
     // ~~~~ For each sample, register the mem address of 1st byte of image and #bytes in image
@@ -249,12 +246,12 @@ namespace PointIdAlgTools {
 
     const float *prb0;
     size_t rbuff0_byte_size;	    // size of result buffer in bytes
-    results_ptr->RawData(model_metadata.outputs(0).name(), (const uint8_t**)&prb0, &rbuff0_byte_size);
+    results_ptr->RawData(triton_modmet.outputs(0).name(), (const uint8_t**)&prb0, &rbuff0_byte_size);
     size_t ncat0 = rbuff0_byte_size/(usamples*sizeof(float));
 
     const float *prb1;
     size_t rbuff1_byte_size;	    // size of result buffer in bytes
-    results_ptr->RawData(model_metadata.outputs(1).name(), (const uint8_t**)&prb1, &rbuff1_byte_size);
+    results_ptr->RawData(triton_modmet.outputs(1).name(), (const uint8_t**)&prb1, &rbuff1_byte_size);
     size_t ncat1 = rbuff1_byte_size/(usamples*sizeof(float));
 
     for(unsigned i = 0; i < usamples; i++) {

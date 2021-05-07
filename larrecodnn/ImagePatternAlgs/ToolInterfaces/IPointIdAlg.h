@@ -45,7 +45,7 @@ namespace PointIdAlgTools {
         Comment("Model directory name in repository of TensorRT inference server")};
       fhicl::OptionalAtom<std::string> TrtisURL{Name("TrtisURL"),
                                                 Comment("URL of TensorRT inference server")};
-      fhicl::OptionalAtom<int64_t> TrtisModelVersion{
+      fhicl::OptionalAtom<std::string> TrtisModelVersion{
         Name("TrtisModelVersion"),
         Comment("Version number of TensorRT inference server model")};
       fhicl::OptionalAtom<bool> TrtisVerbose{

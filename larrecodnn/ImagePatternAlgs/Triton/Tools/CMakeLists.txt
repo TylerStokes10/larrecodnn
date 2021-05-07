@@ -1,5 +1,6 @@
 include_directories($ENV{TRITON_INC})
-cet_find_library(TRITON_LIB NAMES request PATHS $ENV{TRITON_LIB})
+include_directories($ENV{GRPC_INC})
+cet_find_library(TRITON_LIB NAMES grpcclient PATHS $ENV{TRITON_LIB})
 
 art_make(
           TOOL_LIBRARIES

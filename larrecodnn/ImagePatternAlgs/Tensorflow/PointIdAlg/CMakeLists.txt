@@ -20,7 +20,6 @@ art_make(LIB_LIBRARIES larreco_RecoAlg_ImagePatternAlgs_DataProvider
                        art_Utilities
                        canvas
                        ${MF_MESSAGELOGGER}
-                       ${TRTIS_CLIENTS_LIBRARY}
                        ${FHICLCPP}
                        cetlib cetlib_except
                        ${CLHEP}

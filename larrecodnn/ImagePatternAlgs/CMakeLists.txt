@@ -1,7 +1,7 @@
 if( DEFINED ENV{TENSORFLOW_DIR} )
   add_subdirectory(Tensorflow)
 endif ()
-if( DEFINED ENV{TRTIS_CLIENTS_DIR} )
+if( DEFINED ENV{TRITON_DIR} )
   add_subdirectory(Triton)
 endif ()
 add_subdirectory(job)

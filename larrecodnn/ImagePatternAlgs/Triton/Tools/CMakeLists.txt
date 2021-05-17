@@ -1,6 +1,5 @@
-include_directories($ENV{TRITON_INC})
-include_directories($ENV{GRPC_INC})
-cet_find_library(TRITON_LIB NAMES grpcclient PATHS $ENV{TRITON_LIB})
+
+cet_find_library(GRPC_CLIENT NAMES grpcclient PATHS ENV TRITON_LIB REQUIRED)
 
 art_make(
           TOOL_LIBRARIES
@@ -8,7 +7,8 @@ art_make(
           ROOT::Core
           canvas
           ${MF_MESSAGELOGGER}
-	  ${TRITON_LIB}
+	  ${GRPC_CLIENT}
+          ${PROTOBUF}
         )
 
 install_source()

@@ -66,6 +66,7 @@ endif ()
 # trtis_clients is optional
 if( DEFINED ENV{TRITON_DIR} )
   find_ups_product(triton)
+  find_ups_product(grpc)
 endif ()
 
 # source

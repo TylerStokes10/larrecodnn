@@ -1,12 +1,10 @@
-
 cet_find_library(GRPC_CLIENT NAMES grpcclient PATHS ENV TRITON_LIB REQUIRED)
 
 art_make(
-          TOOL_LIBRARIES
-          larreco_RecoAlg_ImagePatternAlgs_DataProvider
-          larcorealg_Geometry
+          LIB_LIBRARIES
           larrecodnn_ImagePatternAlgs_NuSonic_Core
-          larrecodnn_ImagePatternAlgs_NuSonic_Triton
+          ${FHICLCPP}
+          cetlib cetlib_except
           ROOT::Core
           canvas
           ${MF_MESSAGELOGGER}
@@ -14,4 +12,5 @@ art_make(
           ${PROTOBUF}
         )
 
+install_headers()
 install_source()

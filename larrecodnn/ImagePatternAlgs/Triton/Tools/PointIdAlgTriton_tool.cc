@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// Class:       PointIdAlgTrtis_tool
-// Authors:     M.Wang,                                   from DUNE, FNAL, 2020: tensorRT inf client
+// Class:       PointIdAlgTriton_tool
+// Authors:     M.Wang,                                         FNAL, 2021: Nvidia Triton inf client
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "art/Utilities/ToolMacros.h"
@@ -14,19 +14,19 @@ namespace nic = nvidia::inferenceserver::client;
 
 namespace PointIdAlgTools {
 
-  class PointIdAlgTrtis : public IPointIdAlg {
+  class PointIdAlgTriton : public IPointIdAlg {
   public:
-    explicit PointIdAlgTrtis(fhicl::Table<Config> const& table);
+    explicit PointIdAlgTriton(fhicl::Table<Config> const& table);
 
     std::vector<float> Run(std::vector<std::vector<float>> const& inp2d) const override;
     std::vector<std::vector<float>> Run(std::vector<std::vector<std::vector<float>>> const& inps,
                                         int samples = -1) const override;
 
   private:
-    std::string fTrtisModelName;
-    std::string fTrtisURL;
-    bool fTrtisVerbose;
-    std::string fTrtisModelVersion;
+    std::string fTritonModelName;
+    std::string fTritonURL;
+    bool fTritonVerbose;
+    std::string fTritonModelVersion;
 
     std::unique_ptr<nic::InferenceServerGrpcClient> triton_client;
     inference::ModelMetadataResponse triton_modmet;
@@ -38,7 +38,7 @@ namespace PointIdAlgTools {
   };
 
   // ------------------------------------------------------
-  PointIdAlgTrtis::PointIdAlgTrtis(fhicl::Table<Config> const& table)
+  PointIdAlgTriton::PointIdAlgTriton(fhicl::Table<Config> const& table)
     : img::DataProviderAlg(table()), triton_options("")
   {
     // ... Get common config vars
@@ -48,42 +48,42 @@ namespace PointIdAlgTools {
     fCurrentWireIdx = 99999;
     fCurrentScaledDrift = 99999;
 
-    // ... Get "optional" config vars specific to tRTis interface
+    // ... Get "optional" config vars specific to Triton interface
     std::string s_cfgvr;
     bool b_cfgvr;
-    if (table().TrtisModelName(s_cfgvr)) { fTrtisModelName = s_cfgvr; }
+    if (table().TritonModelName(s_cfgvr)) { fTritonModelName = s_cfgvr; }
     else {
-      fTrtisModelName = "mycnn";
+      fTritonModelName = "mycnn";
     }
-    if (table().TrtisURL(s_cfgvr)) { fTrtisURL = s_cfgvr; }
+    if (table().TritonURL(s_cfgvr)) { fTritonURL = s_cfgvr; }
     else {
-      fTrtisURL = "localhost:8001";
+      fTritonURL = "localhost:8001";
     }
-    if (table().TrtisVerbose(b_cfgvr)) { fTrtisVerbose = b_cfgvr; }
+    if (table().TritonVerbose(b_cfgvr)) { fTritonVerbose = b_cfgvr; }
     else {
-      fTrtisVerbose = false;
+      fTritonVerbose = false;
     }
-    if (table().TrtisModelVersion(s_cfgvr)) { fTrtisModelVersion = s_cfgvr; }
+    if (table().TritonModelVersion(s_cfgvr)) { fTritonModelVersion = s_cfgvr; }
     else {
-      fTrtisModelVersion = "";
+      fTritonModelVersion = "";
     }
 
     // ... Create the Triton inference client
-    auto err = nic::InferenceServerGrpcClient::Create(&triton_client, fTrtisURL, fTrtisVerbose);
+    auto err = nic::InferenceServerGrpcClient::Create(&triton_client, fTritonURL, fTritonVerbose);
     if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis")
+      throw cet::exception("PointIdAlgTriton")
             << "error: unable to create client for inference: " << err << std::endl;
     }
 
     // ... Get the model metadata and config information
-    err = triton_client->ModelMetadata(&triton_modmet, fTrtisModelName, fTrtisModelVersion);
+    err = triton_client->ModelMetadata(&triton_modmet, fTritonModelName, fTritonModelVersion);
     if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis")
+      throw cet::exception("PointIdAlgTriton")
             << "error: failed to get model metadata: " << err << std::endl;
     }
-    err = triton_client->ModelConfig(&triton_modcfg, fTrtisModelName, fTrtisModelVersion);
+    err = triton_client->ModelConfig(&triton_modcfg, fTritonModelName, fTritonModelVersion);
     if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis")
+      throw cet::exception("PointIdAlgTriton")
             << "error: failed to get model config: " << err << std::endl;
     }
 
@@ -94,22 +94,22 @@ namespace PointIdAlgTools {
     triton_inpshape.push_back(triton_modmet.inputs(0).shape(3));
 
     // ... Set up Triton inference client options
-    triton_options.model_name_ = fTrtisModelName;
-    triton_options.model_version_ = fTrtisModelVersion;
+    triton_options.model_name_ = fTritonModelName;
+    triton_options.model_version_ = fTritonModelVersion;
 
-    mf::LogInfo("PointIdAlgTrtis") << "url: " << fTrtisURL;
-    mf::LogInfo("PointIdAlgTrtis") << "model name: " << fTrtisModelName;
-    mf::LogInfo("PointIdAlgTrtis") << "model version: " << fTrtisModelVersion;
-    mf::LogInfo("PointIdAlgTrtis") << "verbose: " << fTrtisVerbose;
+    mf::LogInfo("PointIdAlgTriton") << "url: " << fTritonURL;
+    mf::LogInfo("PointIdAlgTriton") << "model name: " << fTritonModelName;
+    mf::LogInfo("PointIdAlgTriton") << "model version: " << fTritonModelVersion;
+    mf::LogInfo("PointIdAlgTriton") << "verbose: " << fTritonVerbose;
 
-    mf::LogInfo("PointIdAlgTrtis") << "tensorRT inference context created.";
+    mf::LogInfo("PointIdAlgTriton") << "tensorRT inference context created.";
 
     resizePatch();
   }
 
   // ------------------------------------------------------
   std::vector<float>
-  PointIdAlgTrtis::Run(std::vector<std::vector<float>> const& inp2d) const
+  PointIdAlgTriton::Run(std::vector<std::vector<float>> const& inp2d) const
   {
     size_t nrows = inp2d.size(), ncols = inp2d.front().size();
 
@@ -121,7 +121,7 @@ namespace PointIdAlgTools {
     auto err = nic::InferInput::Create(
     	&triton_input, triton_modmet.inputs(0).name(), triton_inpshape, triton_modmet.inputs(0).datatype() );
     if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis")
+      throw cet::exception("PointIdAlgTriton")
         << "unable to get input: " << err << std::endl;
     }
     std::shared_ptr<nic::InferInput> triton_input_ptr(triton_input);
@@ -131,8 +131,8 @@ namespace PointIdAlgTools {
 
     err = triton_input_ptr->Reset();
     if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis")
-        << "failed resetting tRTis model input: " << err << std::endl;
+      throw cet::exception("PointIdAlgTriton")
+        << "failed resetting Triton model input: " << err << std::endl;
     }
 
     size_t sbuff_byte_size = (nrows * ncols) * sizeof(float);
@@ -144,7 +144,7 @@ namespace PointIdAlgTools {
     }
     err = triton_input_ptr->AppendRaw(reinterpret_cast<uint8_t*>(fa.data()), sbuff_byte_size);
     if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis") << "failed setting tRTis input: " << err << std::endl;
+      throw cet::exception("PointIdAlgTriton") << "failed setting Triton input: " << err << std::endl;
     }
 
     // ~~~~ Send inference request
@@ -153,8 +153,8 @@ namespace PointIdAlgTools {
 
     err = triton_client->Infer(&results, triton_options, triton_inputs);
     if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis") 
-         << "failed sending tRTis synchronous infer request: " << err << std::endl;
+      throw cet::exception("PointIdAlgTriton") 
+         << "failed sending Triton synchronous infer request: " << err << std::endl;
     }
     std::shared_ptr<nic::InferResult> results_ptr;
     results_ptr.reset(results);
@@ -181,7 +181,7 @@ namespace PointIdAlgTools {
 
   // ------------------------------------------------------
   std::vector<std::vector<float>>
-  PointIdAlgTrtis::Run(std::vector<std::vector<std::vector<float>>> const& inps, int samples) const
+  PointIdAlgTriton::Run(std::vector<std::vector<std::vector<float>>> const& inps, int samples) const
   {
     if ((samples == 0) || inps.empty() || inps.front().empty() || inps.front().front().empty()) {
       return std::vector<std::vector<float>>();
@@ -200,7 +200,7 @@ namespace PointIdAlgTools {
     auto err = nic::InferInput::Create(
     	&triton_input, triton_modmet.inputs(0).name(), triton_inpshape, triton_modmet.inputs(0).datatype() );
     if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis")
+      throw cet::exception("PointIdAlgTriton")
         << "unable to get input: " << err << std::endl;
     }
     std::shared_ptr<nic::InferInput> triton_input_ptr(triton_input);
@@ -209,8 +209,8 @@ namespace PointIdAlgTools {
     // ~~~~ For each sample, register the mem address of 1st byte of image and #bytes in image
     err = triton_input_ptr->Reset();
     if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis")
-        << "failed resetting tRTis model input: " << err << std::endl;
+      throw cet::exception("PointIdAlgTriton")
+        << "failed resetting Triton model input: " << err << std::endl;
     }
 
     size_t sbuff_byte_size = (nrows * ncols) * sizeof(float);
@@ -223,8 +223,8 @@ namespace PointIdAlgTools {
       }
       err = triton_input_ptr->AppendRaw(reinterpret_cast<uint8_t*>(fa[idx].data()), sbuff_byte_size);
       if (!err.IsOk()) {
-        throw cet::exception("PointIdAlgTrtis")
-          << "failed setting tRTis input: " << err << std::endl;
+        throw cet::exception("PointIdAlgTriton")
+          << "failed setting Triton input: " << err << std::endl;
       }
     }
 
@@ -234,8 +234,8 @@ namespace PointIdAlgTools {
 
     err = triton_client->Infer(&results, triton_options, triton_inputs);
     if (!err.IsOk()) {
-      throw cet::exception("PointIdAlgTrtis") 
-         << "failed sending tRTis synchronous infer request: " << err << std::endl;
+      throw cet::exception("PointIdAlgTriton") 
+         << "failed sending Triton synchronous infer request: " << err << std::endl;
     }
     std::shared_ptr<nic::InferResult> results_ptr;
     results_ptr.reset(results);
@@ -265,4 +265,4 @@ namespace PointIdAlgTools {
   }
 
 }
-DEFINE_ART_CLASS_TOOL(PointIdAlgTools::PointIdAlgTrtis)
+DEFINE_ART_CLASS_TOOL(PointIdAlgTools::PointIdAlgTriton)

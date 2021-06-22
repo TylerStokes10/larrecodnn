@@ -40,17 +40,17 @@ namespace PointIdAlgTools {
                                            Comment("How many downsampled ADC entries in patch")};
       fhicl::OptionalAtom<std::string> ToolType{Name("tool_type"),
                                                 Comment("PointID algorithm tool type")};
-      fhicl::OptionalAtom<std::string> TrtisModelName{
-        Name("TrtisModelName"),
-        Comment("Model directory name in repository of TensorRT inference server")};
-      fhicl::OptionalAtom<std::string> TrtisURL{Name("TrtisURL"),
-                                                Comment("URL of TensorRT inference server")};
-      fhicl::OptionalAtom<std::string> TrtisModelVersion{
-        Name("TrtisModelVersion"),
-        Comment("Version number of TensorRT inference server model")};
-      fhicl::OptionalAtom<bool> TrtisVerbose{
-        Name("TrtisVerbose"),
-        Comment("Verbosity switch for TensorRT inference server client")};
+      fhicl::OptionalAtom<std::string> TritonModelName{
+        Name("TritonModelName"),
+        Comment("Model directory name in repository of Nvidia Triton inference server")};
+      fhicl::OptionalAtom<std::string> TritonURL{Name("TritonURL"),
+                                                Comment("URL of Nvidia Triton inference server")};
+      fhicl::OptionalAtom<std::string> TritonModelVersion{
+        Name("TritonModelVersion"),
+        Comment("Version number of Nvidia Triton inference server model")};
+      fhicl::OptionalAtom<bool> TritonVerbose{
+        Name("TritonVerbose"),
+        Comment("Verbosity switch for Nvidia Triton inference server client")};
     };
     virtual ~IPointIdAlg() noexcept = default;
 

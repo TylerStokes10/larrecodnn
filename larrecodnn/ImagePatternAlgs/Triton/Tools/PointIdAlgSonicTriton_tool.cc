@@ -136,8 +136,7 @@ namespace PointIdAlgTools {
 
     // ~~~~ For each sample, prepare images for sending to server
     for (size_t idx = 0; idx < usamples; ++idx) {
-      data1->emplace_back();
-      auto& img = data1->back();
+      auto& img = data1->emplace_back();
       // ..first flatten the 2d array into contiguous 1d block
       for (size_t ir = 0; ir < nrows; ++ir) {
         img.insert(img.end(), inps[idx][ir].begin(), inps[idx][ir].end());

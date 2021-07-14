@@ -1,10 +1,7 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
-//#include "FWCore/ParameterSet/interface/FileInPath.h"
-//#include "FWCore/ServiceRegistry/interface/Service.h"
 #include "art/Framework/Services/Registry/ServiceHandle.h"
 #include "canvas/Utilities/Exception.h"
 #include "larrecodnn/ImagePatternAlgs/NuSonic/Triton/TritonClient.h"
-//#include "larrecodnn/ImagePatternAlgs/NuSonic/Triton/TritonService.h"
 #include "larrecodnn/ImagePatternAlgs/NuSonic/Triton/triton_utils.h"
 
 #include "grpc_client.h"
@@ -18,21 +15,21 @@
 #include <utility>
 #include <tuple>
 
+
 namespace ni = nvidia::inferenceserver;
 namespace nic = ni::client;
 
 //based on https://github.com/triton-inference-server/server/blob/v2.3.0/src/clients/c++/examples/simple_grpc_async_infer_client.cc
 //and https://github.com/triton-inference-server/server/blob/v2.3.0/src/clients/c++/perf_client/perf_client.cc
 
+namespace lartriton {
+
 TritonClient::TritonClient(const fhicl::ParameterSet& params)
-    : NuSonicClient(params, "TritonClient"),
+    : allowedTries_(params.get<unsigned>("allowedTries", 0)),
       serverURL_(params.get<std::string>("serverURL")),
       verbose_(params.get<bool>("verbose")),
       options_(params.get<std::string>("modelName")) {
   //get appropriate server for this model
-  //art::ServiceHandle<TritonService> ts;
-  //std::string url =
-  //    ts->serverAddress(options_.model_name_, params.get<std::string>("preferredServer"));
   if (verbose_)
     MF_LOG_INFO("TritonClient") << "Using server: " << serverURL_;
 
@@ -70,7 +67,7 @@ TritonClient::TritonClient(const fhicl::ParameterSet& params)
   const auto& nicOutputs = modelMetadata.outputs();
 
   //report all model errors at once
-  std::stringstream msg;
+  std::ostringstream msg;
   std::string msg_str;
 
   //currently no use case is foreseen for a model with zero inputs or outputs
@@ -86,15 +83,14 @@ TritonClient::TritonClient(const fhicl::ParameterSet& params)
     throw cet::exception("ModelErrors") << msg_str;
 
   //setup input map
-  std::stringstream io_msg;
+  std::ostringstream io_msg;
   if (verbose_)
     io_msg << "Model inputs: "
            << "\n";
   inputsTriton_.reserve(nicInputs.size());
   for (const auto& nicInput : nicInputs) {
     const auto& iname = nicInput.name();
-    auto [curr_itr, success] = input_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(iname), std::forward_as_tuple(iname, nicInput, noBatch_));
+    auto [curr_itr, success] = input_.try_emplace(iname, iname, nicInput, noBatch_);
     auto& curr_input = curr_itr->second;
     inputsTriton_.push_back(curr_input.data());
     if (verbose_) {
@@ -116,8 +112,7 @@ TritonClient::TritonClient(const fhicl::ParameterSet& params)
     const auto& oname = nicOutput.name();
     if (!s_outputs.empty() and s_outputs.find(oname) == s_outputs.end())
       continue;
-    auto [curr_itr, success] = output_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(oname), std::forward_as_tuple(oname, nicOutput, noBatch_));
+    auto [curr_itr, success] = output_.try_emplace(oname, oname, nicOutput, noBatch_);
     auto& curr_output = curr_itr->second;
     outputsTriton_.push_back(curr_output.data());
     if (verbose_) {
@@ -137,8 +132,8 @@ TritonClient::TritonClient(const fhicl::ParameterSet& params)
   setBatchSize(1);
 
   //print model info
-  std::stringstream model_msg;
   if (verbose_) {
+    std::ostringstream model_msg;
     model_msg << "Model name: " << options_.model_name_ << "\n"
               << "Model version: " << options_.model_version_ << "\n"
               << "Model max batch size: " << (noBatch_ ? 0 : maxBatchSize_) << "\n";
@@ -151,17 +146,16 @@ bool TritonClient::setBatchSize(unsigned bsize) {
     MF_LOG_WARNING("TritonClient") << "Requested batch size " << bsize << " exceeds server-specified max batch size "
                                    << maxBatchSize_ << ". Batch size will remain as" << batchSize_;
     return false;
-  } else {
-    batchSize_ = bsize;
-    //set for input and output
-    for (auto& element : input_) {
-      element.second.setBatchSize(bsize);
-    }
-    for (auto& element : output_) {
-      element.second.setBatchSize(bsize);
-    }
-    return true;
   }
+  batchSize_ = bsize;
+  //set for input and output
+  for (auto& element : input_) {
+    element.second.setBatchSize(bsize);
+  }
+  for (auto& element : output_) {
+    element.second.setBatchSize(bsize);
+  }
+  return true;
 }
 
 void TritonClient::reset() {
@@ -191,6 +185,10 @@ bool TritonClient::getResults(std::shared_ptr<nic::InferResult> results) {
   return true;
 }
 
+void TritonClient::start() {
+  tries_ = 0;
+}
+
 //default case for sync and pseudo async
 void TritonClient::evaluate() {
   //in case there is nothing to process
@@ -203,7 +201,7 @@ void TritonClient::evaluate() {
   const auto& start_status = getServerSideStatus();
 
   //blocking call
-  auto t1 = std::chrono::high_resolution_clock::now();
+  auto t1 = std::chrono::steady_clock::now();
   nic::InferResult* results;
   bool status = triton_utils::warnIfError(client_->Infer(&results, options_, inputsTriton_, outputsTriton_),
   					  "evaluate(): unable to run and/or get result");
@@ -212,7 +210,7 @@ void TritonClient::evaluate() {
     return;
   }
 
-  auto t2 = std::chrono::high_resolution_clock::now();
+  auto t2 = std::chrono::steady_clock::now();
   MF_LOG_DEBUG("TritonClient") << "Remote time: "
                                << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 
@@ -226,11 +224,30 @@ void TritonClient::evaluate() {
   std::shared_ptr<nic::InferResult> results_ptr(results);
   status = getResults(results_ptr);
 
+  //status = getResults(std::make_shared<nvidia::inferenceserver::client::InferResult> (results));
+  //status = getResults(std::make_shared<nic::InferResult> (results));
+
   finish(status);
 }
 
+void TritonClient::finish(bool success) {
+  //retries are only allowed if no exception was raised
+  if (!success) {
+    ++tries_;
+    //if max retries has not been exceeded, call evaluate again
+    if (tries_ < allowedTries_) {
+      evaluate();
+      //avoid calling doneWaiting() twice
+      return;
+    }
+    //prepare an exception if exceeded
+    throw cet::exception("TritonClient")
+          << "call failed after max " << tries_ << " tries" << std::endl;
+  }
+}
+
 void TritonClient::reportServerSideStats(const TritonClient::ServerSideStats& stats) const {
-  std::stringstream msg;
+  std::ostringstream msg;
 
   // https://github.com/triton-inference-server/server/blob/v2.3.0/src/clients/c++/perf_client/inference_profiler.cc
   const uint64_t count = stats.success_count_;
@@ -298,4 +315,4 @@ inference::ModelStatistics TritonClient::getServerSideStatus() const {
   return inference::ModelStatistics{};
 }
 
-//descClient.add<edm::FileInPath>("modelConfigPath");
+}

@@ -49,24 +49,10 @@ namespace PointIdAlgTools {
     fCurrentScaledDrift = 99999;
 
     // ... Get "optional" config vars specific to Triton interface
-    std::string s_cfgvr;
-    bool b_cfgvr;
-    if (table().TritonModelName(s_cfgvr)) { fTritonModelName = s_cfgvr; }
-    else {
-      fTritonModelName = "mycnn";
-    }
-    if (table().TritonURL(s_cfgvr)) { fTritonURL = s_cfgvr; }
-    else {
-      fTritonURL = "localhost:8001";
-    }
-    if (table().TritonVerbose(b_cfgvr)) { fTritonVerbose = b_cfgvr; }
-    else {
-      fTritonVerbose = false;
-    }
-    if (table().TritonModelVersion(s_cfgvr)) { fTritonModelVersion = s_cfgvr; }
-    else {
-      fTritonModelVersion = "";
-    }
+    fTritonModelName = table().TritonModelName();
+    fTritonURL = table().TritonURL();
+    fTritonVerbose = table().TritonVerbose();
+    fTritonModelVersion = table().TritonModelVersion();
 
     // ... Create the Triton inference client
     auto err = nic::InferenceServerGrpcClient::Create(&triton_client, fTritonURL, fTritonVerbose);

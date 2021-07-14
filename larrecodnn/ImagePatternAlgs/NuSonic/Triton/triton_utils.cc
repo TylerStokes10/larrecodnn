@@ -11,9 +11,11 @@ namespace triton_utils {
   std::string printColl(const C& coll, const std::string& delim) {
     if (coll.empty())
       return "";
+    using std::begin;
+    using std::end;
     std::stringstream msg;
     //avoid trailing delim
-    std::copy(std::begin(coll), std::end(coll), std::experimental::make_ostream_joiner(msg, delim));
+    std::copy(begin(coll), end(coll), std::experimental::make_ostream_joiner(msg, delim));
     return msg.str();
   }
 

@@ -25,7 +25,7 @@ namespace PointIdAlgTools {
     unsigned fTritonTimeout;
     unsigned fTritonAllowedTries;
 
-    std::unique_ptr<TritonClient> triton_client;
+    std::unique_ptr<lartriton::TritonClient> triton_client;
   };
 
   // ------------------------------------------------------
@@ -40,24 +40,10 @@ namespace PointIdAlgTools {
     fCurrentScaledDrift = 99999;
 
     // ... Get "optional" config vars specific to tRTis interface
-    std::string s_cfgvr;
-    bool b_cfgvr;
-    if (table().TritonModelName(s_cfgvr)) { fTritonModelName = s_cfgvr; }
-    else {
-      fTritonModelName = "mycnn";
-    }
-    if (table().TritonURL(s_cfgvr)) { fTritonURL = s_cfgvr; }
-    else {
-      fTritonURL = "localhost:8001";
-    }
-    if (table().TritonVerbose(b_cfgvr)) { fTritonVerbose = b_cfgvr; }
-    else {
-      fTritonVerbose = false;
-    }
-    if (table().TritonModelVersion(s_cfgvr)) { fTritonModelVersion = s_cfgvr; }
-    else {
-      fTritonModelVersion = "";
-    }
+    fTritonModelName = table().TritonModelName();
+    fTritonURL = table().TritonURL();
+    fTritonVerbose = table().TritonVerbose();
+    fTritonModelVersion = table().TritonModelVersion();
 
     // ... Create parameter set for Triton inference client
     fhicl::ParameterSet TritonPset;
@@ -70,7 +56,7 @@ namespace PointIdAlgTools {
     TritonPset.put("outputs","[]");
     
     // ... Create the Triton inference client
-    triton_client = std::make_unique<TritonClient>(TritonPset);
+    triton_client = std::make_unique<lartriton::TritonClient>(TritonPset);
 
     mf::LogInfo("PointIdAlgSonicTriton") << "url: " << fTritonURL;
     mf::LogInfo("PointIdAlgSonicTriton") << "model name: " << fTritonModelName;
@@ -93,12 +79,11 @@ namespace PointIdAlgTools {
     // ~~~~ Initialize the inputs
     auto& triton_input = triton_client->input().begin()->second;
 
-    auto data1 = std::make_shared<TritonInput<float>>();
+    auto data1 = std::make_shared<lartriton::TritonInput<float>>();
     data1->reserve(1);
 
     // ~~~~ Prepare image for sending to server
-    data1->emplace_back();
-    auto& img = data1->back();
+    auto& img = data1->emplace_back();
     // ..first flatten the 2d array into contiguous 1d block
     for (size_t ir = 0; ir < nrows; ++ir) {
       img.insert(img.end(), inp2d[ir].begin(), inp2d[ir].end());
@@ -146,7 +131,7 @@ namespace PointIdAlgTools {
     // ~~~~ Initialize the inputs
     auto& triton_input = triton_client->input().begin()->second;
 
-    auto data1 = std::make_shared<TritonInput<float>>();
+    auto data1 = std::make_shared<lartriton::TritonInput<float>>();
     data1->reserve(usamples);
 
     // ~~~~ For each sample, prepare images for sending to server

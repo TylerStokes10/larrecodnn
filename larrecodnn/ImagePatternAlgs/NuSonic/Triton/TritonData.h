@@ -1,8 +1,6 @@
 #ifndef NuSonic_Triton_TritonData
 #define NuSonic_Triton_TritonData
 
-//#include "FWCore/Utilities/interface/Exception.h"
-//#include "FWCore/Utilities/interface/Span.h"
 #include "canvas/Utilities/Exception.h"
 #include "larrecodnn/ImagePatternAlgs/NuSonic/Triton/Span.h"
 
@@ -16,6 +14,8 @@
 
 #include "grpc_client.h"
 #include "grpc_service.pb.h"
+
+namespace lartriton {
 
 //forward declaration
 class TritonClient;
@@ -102,13 +102,6 @@ using TritonInputMap = std::unordered_map<std::string, TritonInputData>;
 using TritonOutputData = TritonData<nvidia::inferenceserver::client::InferRequestedOutput>;
 using TritonOutputMap = std::unordered_map<std::string, TritonOutputData>;
 
-//avoid "explicit specialization after instantiation" error
-template <>
-template <typename DT>
-void TritonInputData::toServer(std::shared_ptr<TritonInput<DT>> ptr);
-template <>
-template <typename DT>
-TritonOutput<DT> TritonOutputData::fromServer() const;
 template <>
 void TritonInputData::reset();
 template <>
@@ -122,4 +115,5 @@ void TritonOutputData::createObject(nvidia::inferenceserver::client::InferReques
 extern template class TritonData<nvidia::inferenceserver::client::InferInput>;
 extern template class TritonData<nvidia::inferenceserver::client::InferRequestedOutput>;
 
+}
 #endif

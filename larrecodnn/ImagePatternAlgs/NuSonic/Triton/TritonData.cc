@@ -18,6 +18,8 @@ namespace nvidia {
   }  // namespace inferenceserver
 }  // namespace nvidia
 
+namespace lartriton {
+
 //dims: kept constant, represents config.pbtxt parameters of model (converted from google::protobuf::RepeatedField to vector)
 //fullShape: if batching is enabled, first entry is batch size; values can be modified
 //shape: view into fullShape, excluding batch size entry
@@ -183,3 +185,5 @@ template void TritonInputData::toServer(std::shared_ptr<TritonInput<float>> data
 template void TritonInputData::toServer(std::shared_ptr<TritonInput<int64_t>> data_in);
 
 template TritonOutput<float> TritonOutputData::fromServer() const;
+
+}

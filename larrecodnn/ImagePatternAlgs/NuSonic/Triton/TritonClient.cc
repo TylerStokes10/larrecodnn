@@ -101,7 +101,7 @@ TritonClient::TritonClient(const fhicl::ParameterSet& params)
 
   //allow selecting only some outputs from server
   const auto& v_outputs = params.get<std::vector<std::string>>("outputs");
-  std::unordered_set s_outputs(v_outputs.begin(), v_outputs.end());
+  std::unordered_set<std::string> s_outputs(v_outputs.begin(), v_outputs.end());
 
   //setup output map
   if (verbose_)

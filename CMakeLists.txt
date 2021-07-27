@@ -45,7 +45,8 @@ find_ups_product(art_root_io)
 find_ups_product( postgresql )
 find_ups_product( range )
 find_ups_product( eigen )
-find_ups_product( root )
+find_ups_product( tbb )
+find_ups_root()
 
 # macros for dictionary and simple_plugin
 include(ArtDictionary)
@@ -68,6 +69,8 @@ if( DEFINED ENV{TRITON_DIR} )
   find_ups_product(triton)
   find_ups_product(grpc)
 endif ()
+
+include_directories( $ENV{EIGEN_INC} )
 
 # source
 add_subdirectory(larrecodnn)

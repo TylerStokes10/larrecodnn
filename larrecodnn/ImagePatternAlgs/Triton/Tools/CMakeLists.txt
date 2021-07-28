@@ -7,8 +7,8 @@ art_make(
           larcorealg_Geometry
           larrecodnn_ImagePatternAlgs_NuSonic_Triton
           ROOT::Core
-          canvas
-          ${MF_MESSAGELOGGER}
+          canvas::canvas
+          messagefacility::MF_MessageLogger
 	  ${GRPC_CLIENT}
           ${PROTOBUF}
         )

@@ -9,19 +9,19 @@ art_make(LIB_LIBRARIES larreco_RecoAlg_ImagePatternAlgs_DataProvider
                        lardataobj_RecoBase
                        larreco_Calorimetry
                        nusimdata_SimulationBase
-                       ${ART_FRAMEWORK_CORE}
-                       ${ART_FRAMEWORK_PRINCIPAL}
-                       ${ART_FRAMEWORK_SERVICES_REGISTRY}
-                       ${ART_ROOT_IO_TFILE_SUPPORT}
-                       ${ART_ROOT_IO_TFILESERVICE_SERVICE}
+                       art::Framework_Core
+                       art::Framework_Principal
+                       art::Framework_Services_Registry
+                       art_root_io::tfile_support
+                       art_root_io::TFileService_service
                        ${ART_FRAMEWORK_SERVICES_OPTIONAL_RANDOMNUMBERGENERATOR_SERVICE}
-                       art_Persistency_Common
-                       art_Persistency_Provenance
-                       art_Utilities
-                       canvas
-                       ${MF_MESSAGELOGGER}
-                       ${FHICLCPP}
-                       cetlib cetlib_except
+                       art::Persistency_Common
+                       art::Persistency_Provenance
+                       art::Utilities
+                       canvas::canvas
+                       messagefacility::MF_MessageLogger
+                       fhiclcpp::fhiclcpp
+                       cetlib::cetlib cetlib_except
                        ${CLHEP}
                        ${ROOT_BASIC_LIB_LIST}
                        ROOT::Core

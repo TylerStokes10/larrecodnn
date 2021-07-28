@@ -1,16 +1,16 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent	larrecodnn v09_30_00_rc1
+parent	larrecodnn v09_08_00_01
 defaultqual	e20
 #
 fcldir product_dir job
 fwdir  product_dir config_data
 #
 product         version
-larreco         v09_30_00_rc1
+larreco         v09_06_10_01
 triton		v2_3_0d		-	optional
 tensorflow      v2_3_1a		-	optional
-cetbuildtools   v8_11_02	-	only_for_build
+cetbuildtools   v8_12_00	-	only_for_build
 end_product_list
 
 qualifier     larreco         tensorflow     triton

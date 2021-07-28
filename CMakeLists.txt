@@ -8,8 +8,7 @@
 
 cmake_minimum_required (VERSION 3.12...3.18 FATAL_ERROR)
 
-project(larrecodnn LANGUAGES CXX)
-set(larrecodnn_CMAKE_PROJECT_VERSION_STRING v09_30_00_rc1)
+project(larrecodnn VERSION 09.08.00.01 LANGUAGES CXX)
 
 # cetbuildtools contains our cmake modules
 find_package(cetbuildtools REQUIRED)

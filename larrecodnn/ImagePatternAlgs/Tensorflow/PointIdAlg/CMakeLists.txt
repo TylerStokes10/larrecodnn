@@ -22,7 +22,6 @@ art_make(LIB_LIBRARIES larreco_RecoAlg_ImagePatternAlgs_DataProvider
                        messagefacility::MF_MessageLogger
                        fhiclcpp::fhiclcpp
                        cetlib::cetlib cetlib_except
-                       ${CLHEP}
                        ${ROOT_BASIC_LIB_LIST}
                        ROOT::Core
                        ROOT::Minuit

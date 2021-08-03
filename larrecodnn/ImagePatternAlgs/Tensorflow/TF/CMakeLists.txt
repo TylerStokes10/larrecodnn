@@ -4,9 +4,9 @@ art_make(
           LIB_LIBRARIES
 			fhiclcpp::fhiclcpp
 			cetlib::cetlib cetlib_except
-			${TENSORFLOW}
-			${PROTOBUF}
-			${FOR_TENSORFLOW}
+			TENSORFLOW
+			PROTOBUF
+			FOR_TENSORFLOW
       #rt #workaround for larsoft issue 17960
         )
 

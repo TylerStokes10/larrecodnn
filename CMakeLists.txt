@@ -6,9 +6,9 @@
 #  buildtool [-I /install/path] -bt[i] -jN
 # ======================================================================
 
-cmake_minimum_required (VERSION 3.12...3.18 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.19 FATAL_ERROR)
 
-project(larrecodnn LANGUAGES CXX)
+project(larrecodnn VERSION 09.08.02.01 LANGUAGES CXX)
 
 # cetbuildtools contains our cmake modules
 find_package(cetbuildtools REQUIRED)
@@ -45,7 +45,8 @@ find_ups_product(art_root_io)
 find_ups_product( postgresql )
 find_ups_product( range )
 find_ups_product( eigen )
-find_ups_product( root )
+find_ups_product( tbb )
+find_ups_root()
 
 # macros for dictionary and simple_plugin
 include(ArtDictionary)
@@ -68,6 +69,8 @@ if( DEFINED ENV{TRITON_DIR} )
   find_ups_product(triton)
   find_ups_product(grpc)
 endif ()
+
+include_directories( $ENV{EIGEN_INC} )
 
 # source
 add_subdirectory(larrecodnn)

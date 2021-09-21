@@ -1,16 +1,12 @@
-
-cet_find_library(GRPC_CLIENT NAMES grpcclient PATHS ENV TRITON_LIB REQUIRED)
-
 art_make(
           TOOL_LIBRARIES
           larreco_RecoAlg_ImagePatternAlgs_DataProvider
           larcorealg_Geometry
           larrecodnn_ImagePatternAlgs_NuSonic_Triton
           ROOT::Core
-          canvas
-          ${MF_MESSAGELOGGER}
-	  ${GRPC_CLIENT}
-          ${PROTOBUF}
+          canvas::canvas
+          messagefacility::MF_MessageLogger
+          TRITON::grpcclient
         )
 
 install_source()

@@ -6,8 +6,8 @@ art_make(
           larrecodnn_ImagePatternAlgs_Tensorflow_TF
           larcorealg_Geometry
           ROOT::Core
-          canvas
-          ${MF_MESSAGELOGGER}
+          canvas::canvas
+          messagefacility::MF_MessageLogger
         )
 
 install_source()

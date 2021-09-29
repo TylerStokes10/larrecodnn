@@ -44,6 +44,7 @@ namespace PointIdAlgTools {
     fTritonURL = table().TritonURL();
     fTritonVerbose = table().TritonVerbose();
     fTritonModelVersion = table().TritonModelVersion();
+    fTritonAllowedTries = table().TritonAllowedTries();
 
     // ... Create parameter set for Triton inference client
     fhicl::ParameterSet TritonPset;

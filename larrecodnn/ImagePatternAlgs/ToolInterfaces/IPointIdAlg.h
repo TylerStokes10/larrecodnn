@@ -55,6 +55,10 @@ namespace PointIdAlgTools {
         Name("TritonVerbose"),
         Comment("Verbosity switch for Nvidia Triton inference server client"),
         false};
+      fhicl::Atom<unsigned> TritonAllowedTries{
+        Name("TritonAllowedTries"),
+        Comment("Number of allowed attempts for Nvidia Triton inference server client"),
+        1};
     };
     virtual ~IPointIdAlg() noexcept = default;
 

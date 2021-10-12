@@ -747,10 +747,10 @@ nnet::RawWaveformClnSigDump::analyze(art::Event const& evt)
       signalMap[channel.Channel()] = true;
     }
     // .. create a vector for shuffling the wire channel indices
-    std::srand ( unsigned ( std::time(0) ) );
+    auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
     std::vector<size_t> randigitmap;
     for (size_t i=0; i<rawdigitlist.size(); ++i) randigitmap.push_back(i);
-    std::random_shuffle ( randigitmap.begin(), randigitmap.end() );
+    std::shuffle ( randigitmap.begin(), randigitmap.end(), std::mt19937(seed) );
 
     for (size_t rdIter = 0; rdIter < rawdigitlist.size(); ++rdIter) {
 

@@ -182,7 +182,9 @@ nnet::RawWaveformDump::RawWaveformDump(fhicl::ParameterSet const& p)
   , fMaxNoiseChannelsPerEvent(p.get<int>("MaxNoiseChannelsPerEvent", 1000))
   , fCollectionPlaneLabel(p.get<std::string>("CollectionPlaneLabel", "Z"))
 {
-  if (std::getenv("PROCESS")) { fDumpWaveformsFileName += string(std::getenv("PROCESS")) + "-"; }
+  if (std::getenv("CLUSTER") && std::getenv("PROCESS")) {
+    fDumpWaveformsFileName += string(std::getenv("CLUSTER")) + "-" + string(std::getenv("PROCESS")) + "-";
+  }
 
   if (fDigitModuleLabel.empty() && fWireProducerLabel.empty()) {
     throw cet::exception("RawWaveformDump")

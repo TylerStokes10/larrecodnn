@@ -115,7 +115,7 @@ private:
   art::ServiceHandle<geo::Geometry> fgeom;
   art::ServiceHandle<cheat::ParticleInventoryService> PIS;
 
-  std::unique_ptr< CLHEP::RandFlat> fRandFlat;
+  CLHEP::RandFlat fRandFlat;
 
   c2numpy_writer npywriter;
 };
@@ -187,6 +187,9 @@ nnet::RawWaveformDump::RawWaveformDump(fhicl::ParameterSet const& p)
   , fSaveSignal(p.get<bool>("SaveSignal", true))
   , fMaxNoiseChannelsPerEvent(p.get<int>("MaxNoiseChannelsPerEvent"))
   , fCollectionPlaneLabel(p.get<std::string>("CollectionPlaneLabel"))
+  , fRandFlat{createEngine(art::ServiceHandle<rndm::NuRandomService>{}->declareEngine(
+                           instanceName, p, "SeedForRawWaveformDump"),
+                           "HepJamesRandom", instanceName)}
 {
   if (std::getenv("CLUSTER") && std::getenv("PROCESS")) {
     fDumpWaveformsFileName += string(std::getenv("CLUSTER")) + "-" + string(std::getenv("PROCESS")) + "-";
@@ -201,10 +204,6 @@ nnet::RawWaveformDump::RawWaveformDump(fhicl::ParameterSet const& p)
     throw cet::exception("RawWaveformDump")
       << "Only one of DigitModuleLabel and WireProducerLabel should be set";
   }
-  fRandFlat = std::make_unique< CLHEP::RandFlat >
-              (createEngine(art::ServiceHandle<rndm::NuRandomService>{}->declareEngine(
-                            instanceName, p, "SeedForRawWaveformDump"),
-                            "HepJamesRandom", instanceName));
 }
 
 //-----------------------------------------------------------------------
@@ -479,7 +478,7 @@ nnet::RawWaveformDump::analyze(art::Event const& evt)
     // ... Now write out the signal waveforms for each track
     if (!Trk2ChVecMap.empty()) {
       for (auto const& ittrk : Trk2ChVecMap) {
-   	int i = fRandFlat->fireInt(ittrk.second.size()); // randomly select one channel with a signal from this particle
+   	int i = fRandFlat.fireInt(ittrk.second.size()); // randomly select one channel with a signal from this particle
         chnum = ittrk.second[i];
 
         if (not selected_channels.insert(chnum).second) {
@@ -588,13 +587,13 @@ nnet::RawWaveformDump::analyze(art::Event const& evt)
     	      if (sigfwid < (int)fShortWaveformSize) {
     		// --> case 1: signal range fits within window
     		int dt = fShortWaveformSize - sigfwid;
-    		start_tick = sigtdc1 - dt * fRandFlat->fire(0,1);
+    		start_tick = sigtdc1 - dt * fRandFlat.fire(0,1);
     	      }
     	      else {
     		// --> case 2: signal range larger than window
     		int mrgn = fShortWaveformSize/20;
     		int dt = fShortWaveformSize - 2*mrgn;
-    		start_tick = sigtdcm - mrgn - dt * fRandFlat->fire(0,1);
+    		start_tick = sigtdcm - mrgn - dt * fRandFlat.fire(0,1);
     	      }
     	      if (start_tick < 0) start_tick = 0;
     	      end_tick = start_tick + fShortWaveformSize - 1;
@@ -744,7 +743,7 @@ nnet::RawWaveformDump::analyze(art::Event const& evt)
         }
       }
       else {
-        int start_tick = int((dataSize - fShortWaveformSize) * fRandFlat->fire(0, 1));
+        int start_tick = int((dataSize - fShortWaveformSize) * fRandFlat.fire(0, 1));
         for (unsigned int itck = start_tick; itck < (start_tick + fShortWaveformSize); ++itck) {
           c2numpy_int16(&npywriter, adcvec[itck]);
         }

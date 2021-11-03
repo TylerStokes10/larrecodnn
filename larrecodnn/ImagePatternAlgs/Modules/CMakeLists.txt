@@ -21,7 +21,7 @@ art_make( MODULE_LIBRARIES
                        art::Utilities
                        canvas::canvas
                        messagefacility::MF_MessageLogger
-                       ${CLHEP}
+                       CLHEP::CLHEP
                        ${ROOT_BASIC_LIB_LIST}
                        ROOT::Core
 )

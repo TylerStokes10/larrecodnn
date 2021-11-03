@@ -9,6 +9,7 @@ art_make( MODULE_LIBRARIES
                        lardataalg_DetectorInfo
                        lardataobj_RecoBase
                        nusimdata_SimulationBase
+                       nurandom_RandomUtils_NuRandomService_service
                        art::Framework_Core
                        art::Framework_Principal
                        art::Framework_Services_Registry
@@ -20,6 +21,7 @@ art_make( MODULE_LIBRARIES
                        art::Utilities
                        canvas::canvas
                        messagefacility::MF_MessageLogger
+                       ${CLHEP}
                        ${ROOT_BASIC_LIB_LIST}
                        ROOT::Core
 )

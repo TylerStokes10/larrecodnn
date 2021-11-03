@@ -57,7 +57,8 @@
 #include "larevt/CalibrationDBI/Interface/ChannelStatusProvider.h"
 #include "larevt/CalibrationDBI/Interface/ChannelStatusService.h"
 
-#include "TRandom3.h"
+#include "nurandom/RandomUtils/NuRandomService.h"
+#include "CLHEP/Random/RandFlat.h"
 #include "c2numpy.h"
 
 using std::cout;
@@ -128,7 +129,7 @@ private:
   art::ServiceHandle<geo::Geometry> fgeom;
   art::ServiceHandle<cheat::ParticleInventoryService> PIS;
 
-  TRandom3 *fRand;
+  std::unique_ptr< CLHEP::RandFlat> fRandFlat;
 
   c2numpy_writer npywriter;
   c2numpy_writer npywriter2;
@@ -175,6 +176,11 @@ public:
   };
 };
 
+// Create the random number generator
+namespace {
+  std::string const instanceName = "RawWaveformClnSigDump";
+}
+
 //-----------------------------------------------------------------------
 nnet::RawWaveformClnSigDump::RawWaveformClnSigDump(fhicl::ParameterSet const& p)
   : EDAnalyzer{p}
@@ -186,20 +192,20 @@ nnet::RawWaveformClnSigDump::RawWaveformClnSigDump(fhicl::ParameterSet const& p)
   , fCleanSignalDigitModuleLabel(p.get<std::string>("CleanSignalDigitModuleLabel", "simWire:signal"))
   , fUseFullWaveform(p.get<bool>("UseFullWaveform", true))
   , fShortWaveformSize(p.get<unsigned int>("ShortWaveformSize"))
-  , fEstIndFWForOffset(p.get<int>("EstIndFWForOffset",14))
-  , fEstColFWForOffset(p.get<int>("EstIndFWForOffset",32))
+  , fEstIndFWForOffset(p.get<int>("EstIndFWForOffset"))
+  , fEstColFWForOffset(p.get<int>("EstIndFWForOffset"))
   , fSelectGenLabel(p.get<std::string>("SelectGenLabel", "ANY"))
   , fSelectProcID(p.get<std::string>("SelectProcID", "ANY"))
   , fSelectPDGCode(p.get<int>("SelectPDGCode", 0))
-  , fPlaneToDump(p.get<std::string>("PlaneToDump", "U"))
+  , fPlaneToDump(p.get<std::string>("PlaneToDump"))
   , fMinParticleEnergyGeV(p.get<double>("MinParticleEnergyGeV", 0.))
   , fMinEnergyDepositedMeV(p.get<double>("MinEnergyDepositedMeV", 0.))
-  , fMinNumberOfElectrons(p.get<int>("MinNumberOfElectrons", 1000))
-  , fMaxNumberOfElectrons(p.get<int>("MaxNumberOfElectrons", 100000))
+  , fMinNumberOfElectrons(p.get<int>("MinNumberOfElectrons", 600))
+  , fMaxNumberOfElectrons(p.get<int>("MaxNumberOfElectrons", -1))
   , fMinPureSignalADCs(p.get<int>("MinPureSignalADCs", 0))
   , fSaveSignal(p.get<bool>("SaveSignal", true))
-  , fMaxNoiseChannelsPerEvent(p.get<int>("MaxNoiseChannelsPerEvent", 1000))
-  , fCollectionPlaneLabel(p.get<std::string>("CollectionPlaneLabel", "Z"))
+  , fMaxNoiseChannelsPerEvent(p.get<int>("MaxNoiseChannelsPerEvent"))
+  , fCollectionPlaneLabel(p.get<std::string>("CollectionPlaneLabel"))
 {
   if (std::getenv("CLUSTER") && std::getenv("PROCESS")) {
     fDumpWaveformsFileName += string(std::getenv("CLUSTER")) + "-" + string(std::getenv("PROCESS")) + "-";
@@ -210,8 +216,10 @@ nnet::RawWaveformClnSigDump::RawWaveformClnSigDump(fhicl::ParameterSet const& p)
     throw cet::exception("RawWaveformClnSigDump")
       << "Both DigitModuleLabel and CleanSignalModuleLabel are empty";
   }
-  fRand = new TRandom3(0);
-  fRand->SetSeed(0);
+  fRandFlat = std::make_unique< CLHEP::RandFlat >
+              (createEngine(art::ServiceHandle<rndm::NuRandomService>{}->declareEngine(
+                            instanceName, p, "SeedForRawWaveformDump"),
+                            "HepJamesRandom", instanceName));
 }
 
 //-----------------------------------------------------------------------
@@ -527,7 +535,7 @@ nnet::RawWaveformClnSigDump::analyze(art::Event const& evt)
     // ... Now write out the signal waveforms for each track
     if (!Trk2ChVecMap.empty()) {
       for (auto const& ittrk : Trk2ChVecMap) {
-    	int i = fRand->Integer(ittrk.second.size()); // randomly select one channel with a signal from this particle
+    	int i = fRandFlat->fireInt(ittrk.second.size()); // randomly select one channel with a signal from this particle
     	chnum = ittrk.second[i];
 
     	if (not selected_channels.insert(chnum).second) {
@@ -642,13 +650,13 @@ nnet::RawWaveformClnSigDump::analyze(art::Event const& evt)
     	      if (sigfwid < (int)fShortWaveformSize) {
     		// --> case 1: signal range fits within window
     		int dt = fShortWaveformSize - sigfwid;
-    		start_tick = sigtdc1 - dt * fRand->Uniform(0,1);
+    		start_tick = sigtdc1 - dt * fRandFlat->fire(0,1);
     	      }
     	      else {
     		// --> case 2: signal range larger than window
     		int mrgn = fShortWaveformSize/20;
     		int dt = fShortWaveformSize - 2*mrgn;
-    		start_tick = sigtdcm - mrgn - dt * fRand->Uniform(0,1);
+    		start_tick = sigtdcm - mrgn - dt * fRandFlat->fire(0,1);
     	      }
     	      if (start_tick < 0) start_tick = 0;
     	      end_tick = start_tick + fShortWaveformSize - 1;
@@ -793,7 +801,7 @@ nnet::RawWaveformClnSigDump::analyze(art::Event const& evt)
         }
       }
       else {
-        int start_tick = int((dataSize - fShortWaveformSize) * fRand->Uniform(0, 1));
+        int start_tick = int((dataSize - fShortWaveformSize) * fRandFlat->fire(0, 1));
         for (unsigned int itck = start_tick; itck < (start_tick + fShortWaveformSize); ++itck) {
           c2numpy_int16(&npywriter, short(adcvec[itck]));
         }

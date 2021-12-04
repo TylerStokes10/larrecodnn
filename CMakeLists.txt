@@ -14,8 +14,6 @@ project(larrecodnn VERSION 09.09.10 LANGUAGES CXX)
 find_package(cetbuildtools REQUIRED)
 find_package(Threads)
 
-list(APPEND CMAKE_MODULE_PATH $ENV{CANVAS_ROOT_IO_DIR}/Modules $ENV{ART_DIR}/Modules)
-
 include(CetCMakeEnv)
 cet_cmake_env()
 
@@ -27,7 +25,17 @@ cet_set_compiler_flags(DIAGS CAUTIOUS
 
 cet_report_compiler_flags()
 
-# these are minimum required versions, not the actual product versions
+find_package(Range-v3 REQUIRED PUBLIC)
+find_package (Eigen3 3.3...3.3.9 REQUIRED NO_MODULE)
+find_package(canvas_root_io REQUIRED)
+find_package(art REQUIRED PUBLIC)
+find_package(art_root_io REQUIRED PUBLIC)
+find_package(nurandom REQUIRED PUBLIC)
+find_package(nug4 REQUIRED PUBLIC)
+find_package(nutools REQUIRED PUBLIC)
+find_package(PostgreSQL REQUIRED PUBLIC)
+find_package(ROOT COMPONENTS Core Minuit Minuit2 REQUIRED PUBLIC)
+
 find_ups_product( larcoreobj )
 find_ups_product( larcorealg )
 find_ups_product( larcore )
@@ -37,16 +45,6 @@ find_ups_product( lardata )
 find_ups_product( larevt )
 find_ups_product( larsim )
 find_ups_product( larreco )
-find_ups_product( nutools )
-find_ups_product( nug4 )
-find_ups_product( nurandom )
-find_ups_product( art )
-find_ups_product(art_root_io)
-find_ups_product( postgresql )
-find_ups_product( range )
-find_ups_product( eigen )
-find_ups_product( tbb )
-find_ups_root()
 
 # macros for dictionary and simple_plugin
 include(ArtDictionary)
@@ -54,8 +52,7 @@ include(ArtMake)
 include(BuildPlugins)
 
 if(( DEFINED ENV{TENSORFLOW_DIR} ) OR ( DEFINED ENV{TRITON_DIR} ))
-  find_ups_product( protobuf )
-  cet_find_library(PROTOBUF NAMES protobuf PATHS ENV PROTOBUF_LIB NO_DEFAULT_PATH )
+  find_package(Protobuf REQUIRED)
 endif ()
 # tensorflow is optional
 if( DEFINED ENV{TENSORFLOW_DIR} )

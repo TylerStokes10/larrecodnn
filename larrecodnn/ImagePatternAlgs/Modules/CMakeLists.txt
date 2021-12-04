@@ -2,7 +2,7 @@ art_make( MODULE_LIBRARIES
         larreco_RecoAlg_ImagePatternAlgs_DataProvider
 	lardata_ArtDataHelper
         lardataobj_RawData
-        art_Framework_Services_System_TriggerNamesService_service
+        art::Framework_Services_System_TriggerNamesService_service
         larsim_MCCheater_ParticleInventoryService_service
                        larreco_Calorimetry
                        larcorealg_Geometry
@@ -21,9 +21,9 @@ art_make( MODULE_LIBRARIES
                        art::Utilities
                        canvas::canvas
                        messagefacility::MF_MessageLogger
-                       CLHEP::CLHEP
-                       ${ROOT_BASIC_LIB_LIST}
+                       CLHEP::Random
                        ROOT::Core
+                       ROOT::Tree
 )
 
 install_headers()

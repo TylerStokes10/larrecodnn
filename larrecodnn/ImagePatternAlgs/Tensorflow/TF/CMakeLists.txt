@@ -5,7 +5,7 @@ art_make(
 			fhiclcpp::fhiclcpp
 			cetlib::cetlib cetlib_except
 			TENSORFLOW
-			PROTOBUF
+			protobuf::libprotobuf
 			FOR_TENSORFLOW
       #rt #workaround for larsoft issue 17960
         )

@@ -8,14 +8,14 @@ art_make( MODULE_LIBRARIES
                        larcorealg_Geometry
                        lardataalg_DetectorInfo
                        lardataobj_RecoBase
-                       nusimdata_SimulationBase
-                       nurandom_RandomUtils_NuRandomService_service
+                       nusimdata::SimulationBase
+                       nurandom::RandomUtils_NuRandomService_service
                        art::Framework_Core
                        art::Framework_Principal
                        art::Framework_Services_Registry
                        art_root_io::tfile_support
                        art_root_io::TFileService_service
-                       ${ART_FRAMEWORK_SERVICES_OPTIONAL_RANDOMNUMBERGENERATOR_SERVICE}
+                       art::Framework_Services_Optional_RandomNumberGenerator_service
                        art::Persistency_Common
                        art::Persistency_Provenance
                        art::Utilities

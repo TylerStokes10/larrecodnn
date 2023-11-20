@@ -68,8 +68,6 @@ namespace {
 class NuGraphInference : public art::EDProducer {
 public:
   explicit NuGraphInference(fhicl::ParameterSet const& p);
-  // The compiler-generated destructor is fine for non-base
-  // classes without bare pointers or other resource use.
 
   // Plugins should not be copied or assigned.
   NuGraphInference(NuGraphInference const&) = delete;
@@ -81,32 +79,37 @@ public:
   void produce(art::Event& e) override;
 
 private:
-
-  // Declare member data here.
-
+  vector<std::string> planes;
+  size_t minHits;
+  bool debug;
+  vector<vector<float> > avgs;
+  vector<vector<float> > devs;
 };
 
 
 NuGraphInference::NuGraphInference(fhicl::ParameterSet const& p)
-  : EDProducer{p}  // ,
-  // More initializers here.
+  : EDProducer{p},
+  planes(p.get<vector<std::string>>("planes")),
+  minHits(p.get<size_t>("minHits")),
+  debug(p.get<bool>("debug"))
 {
-  // Call appropriate produces<>() functions here.
+
+  for (size_t ip=0;ip<planes.size();++ip) {
+    avgs.push_back(p.get<vector<float> >("avgs_"+planes[ip]));
+    devs.push_back(p.get<vector<float> >("devs_"+planes[ip]));
+  }
+
   produces< vector<FeatureVector<1> > >("filter");
   // produces< vector<float> >("filter");
+  //
   produces< vector<FeatureVector<5> > >("semantic");
   produces< MVADescription<5> >("semantic");
   // produces< vector<vector<float> > >("semantic");
-  // Call appropriate consumes<>() for any products to be retrieved by this module.
 }
 
 void NuGraphInference::produce(art::Event& e)
 {
-  // Implementation of required member function here.
-  bool debug = 0;
 
-  // Implementation of required member function here.
-  // Get hits from the event record
   art::Handle< vector< Hit > > hitListHandle;
   vector< art::Ptr< Hit > > hitlist;
   if (e.getByLabel("nuslhits", hitListHandle)) {
@@ -115,39 +118,23 @@ void NuGraphInference::produce(art::Event& e)
 
   std::unique_ptr< vector<FeatureVector<1> > > filtcol(new vector<FeatureVector<1> >(hitlist.size(),FeatureVector<1>(std::array<float, 1>({-1.}))));
   // std::unique_ptr< vector<float> > filtcol(new vector<float>(hitlist.size(),-1.));
+
   std::unique_ptr< vector<FeatureVector<5> > > semtcol(new vector<FeatureVector<5> >(hitlist.size(),FeatureVector<5>(std::array<float, 5>({-1.,-1.,-1.,-1.,-1.}))));
   std::unique_ptr<MVADescription<5> > semtdes(new MVADescription<5>(hitListHandle.provenance()->moduleLabel(),"semantic",{"MIP","HIP","shower","michel","diffuse"}));
   // std::unique_ptr<vector<vector<float> > > semtcol(new vector<vector<float> >(hitlist.size(),vector<float>({-1.,-1.,-1.,-1.,-1.})));
 
   if (debug) std::cout << "Hits size=" << hitlist.size() << std::endl;
-  if (hitlist.size()<10) {
+  if (hitlist.size()<minHits) {
     e.put(std::move(filtcol),"filter");
     e.put(std::move(semtcol),"semantic");
     e.put(std::move(semtdes),"semantic");
     return;
   }
 
-  /*
-    normalization factors
-    wire, time, integral, rms
-    u [389.00632   173.42017   144.42065     4.5582113]
-      [148.02893    78.83508   223.89404     2.2621224]
-    v [3.6914261e+02 1.7347592e+02 8.5748262e+08 4.4525051e+00]
-      [1.4524565e+02 8.1395981e+01 1.0625440e+13 1.9223815e+00]
-    y [547.38995   173.13017   109.57691     4.1024675]
-      [284.20657    74.47823   108.93791     1.4318414]
-   */
-  vector<std::array<float, 4> > avgs = {std::array<float, 4>{389.00632, 173.42017, 144.42065, 4.5582113},
-					std::array<float, 4>{3.6914261e+02, 1.7347592e+02, 8.5748262e+08, 4.4525051e+00},
-					std::array<float, 4>{547.38995, 173.13017, 109.57691, 4.1024675}  };
-  vector<std::array<float, 4> > devs = {std::array<float, 4>{148.02893, 78.83508, 223.89404, 2.2621224},
-					std::array<float, 4>{1.4524565e+02, 8.1395981e+01, 1.0625440e+13, 1.9223815e+00},
-					std::array<float, 4>{284.20657, 74.47823, 108.93791, 1.4318414}  };
-
-  vector<vector<float> > nodeft_bare(3,vector<float>());
-  vector<vector<float> > nodeft(3,vector<float>());
-  vector<vector<double> > coords(3,vector<double>());
-  vector<vector<size_t> > idsmap(3,vector<size_t>());
+  vector<vector<float> > nodeft_bare(planes.size(),vector<float>());
+  vector<vector<float> > nodeft(planes.size(),vector<float>());
+  vector<vector<double> > coords(planes.size(),vector<double>());
+  vector<vector<size_t> > idsmap(planes.size(),vector<size_t>());
   vector<size_t> idsmapRev(hitlist.size(),hitlist.size());
   for (auto h : hitlist) {
     idsmap[h->View()].push_back(h.key());
@@ -172,8 +159,8 @@ void NuGraphInference::produce(art::Event& e)
       else return false;
     }; 
   };
-  vector<vector<Edge> > edge2d(3,vector<Edge>());
-  for (size_t p=0; p<3; p++) {
+  vector<vector<Edge> > edge2d(planes.size(),vector<Edge>());
+  for (size_t p=0; p<planes.size(); p++) {
     if (debug) std::cout << "Plane " << p << " has N hits=" << coords[p].size()/2 << std::endl;
     if (coords[p].size()/2<3) continue;
     delaunator::Delaunator d(coords[p]);
@@ -225,7 +212,7 @@ void NuGraphInference::produce(art::Event& e)
 
   //Edges are the same as in pyg, but order is not identical.
   //It should not matter but better verify that output is indeed the same.
-  vector<vector<Edge> > edge3d(3,vector<Edge>());
+  vector<vector<Edge> > edge3d(planes.size(),vector<Edge>());
   for (size_t i = 0; i < splist.size(); ++i) {
     for (size_t j = 0; j < sp2Hit[i].size(); ++j) {
       Edge e;
@@ -235,11 +222,9 @@ void NuGraphInference::produce(art::Event& e)
     }
   }
 
-  std::string planes[3] = {"u","v","y"};
-
   auto x = torch::Dict<std::string, torch::Tensor>();
   auto batch = torch::Dict<std::string, torch::Tensor>();
-  for (size_t p=0;p<3;p++) {
+  for (size_t p=0;p<planes.size();p++) {
     if (debug) std::cout << "plane=" << p << std::endl;
     long int dim = nodeft[p].size()/4;
     torch::Tensor ix = torch::zeros({dim,4},torch::dtype(torch::kFloat32));
@@ -264,7 +249,7 @@ void NuGraphInference::produce(art::Event& e)
   }
 
   auto edge_index_plane = torch::Dict<std::string, torch::Tensor>();
-  for (size_t p=0;p<3;p++) {
+  for (size_t p=0;p<planes.size();p++) {
     if (debug) std::cout << "plane=" << p << std::endl;
     if (debug) std::cout << "2d edge size=" << edge2d[p].size() << std::endl;
     for (size_t n=0;n<edge2d[p].size();n++) {
@@ -285,7 +270,7 @@ void NuGraphInference::produce(art::Event& e)
   }
 
   auto edge_index_nexus = torch::Dict<std::string, torch::Tensor>();
-  for (size_t p=0;p<3;p++) {
+  for (size_t p=0;p<planes.size();p++) {
     if (debug) std::cout << "plane=" << p << std::endl;
     if (debug) std::cout << "3d edge size=" << edge3d[p].size() << std::endl;
     for (size_t n=0;n<edge3d[p].size();n++) {
@@ -318,13 +303,13 @@ void NuGraphInference::produce(art::Event& e)
   if (debug) std::cout << "FORWARD!" << std::endl;
   auto outputs = module.forward(inputs).toGenericDict();
   if (debug) std::cout << "output =" << outputs << std::endl;
-  torch::Tensor f[3];
-  torch::Tensor s[3];
-  for (size_t p=0;p<3;p++) {
+  torch::Tensor f[planes.size()];
+  torch::Tensor s[planes.size()];
+  for (size_t p=0;p<planes.size();p++) {
     s[p] = outputs.at("x_semantic").toGenericDict().at(planes[p]).toTensor();
     f[p] = outputs.at("x_filter").toGenericDict().at(planes[p]).toTensor();
   }
-  for (size_t p=0;p<3;p++) {
+  for (size_t p=0;p<planes.size();p++) {
     for (int i = 0; i < s[p].sizes()[0]; ++i) {
       size_t idx = idsmap[p][i];
       std::array<float, 5> input({s[p][i][0].item<float>(),s[p][i][1].item<float>(),s[p][i][2].item<float>(),s[p][i][3].item<float>(),s[p][i][4].item<float>()});
@@ -344,14 +329,14 @@ void NuGraphInference::produce(art::Event& e)
   if (debug) {
     for (int j=0;j<5;j++) {
       std::cout <<"x_semantic category=" << j << " : ";
-      for (size_t p=0;p<3;p++) {
+      for (size_t p=0;p<planes.size();p++) {
 	for (int i = 0; i < s[p].sizes()[0]; ++i) std::cout << s[p][i][j].item<float>() << ", ";
       }
       std::cout << std::endl;
     }
     //
     std::cout <<"x_filter : ";
-    for (size_t p=0;p<3;p++) {
+    for (size_t p=0;p<planes.size();p++) {
       for (int i = 0; i < f[p].numel(); ++i) std::cout << f[p][i].item<float>() << ", ";
     }
     std::cout << std::endl;

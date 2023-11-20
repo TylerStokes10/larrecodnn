@@ -1,3 +1,4 @@
+#include "nugraph.fcl"
 #include "reco_uboone_data_mcc9_8.fcl"
 #include "SpacePointSolver.fcl"
 
@@ -51,7 +52,7 @@ physics:
   {
     nuslhits: { module_type: "PandoraNuSliceHitsProducer" }
     sps: @local::standard_spacepointsolver
-    NuGraph: { module_type: "NuGraphInference"}
+    NuGraph: @local::NuGraph
   }
 
  reco: [nuslhits, sps, NuGraph]

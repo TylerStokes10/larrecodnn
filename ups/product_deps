@@ -253,6 +253,7 @@ larfinder       v09_00_01       -
 cetmodules	v3_20_00	-	only_for_build
 tensorflow	v2_6_4		-	optional
 triton		v2_25_0b	-	optional
+libtorch        v2_1_1          -
 hep_hpc		v0_14_02        -
 end_product_list
 ####################################
@@ -308,11 +309,11 @@ end_product_list
 #   case it is optional.
 #
 ####################################
-qualifier	larreco		tensorflow	triton	larfinder  hep_hpc
-c14:debug	c14:debug	c14:p3913	c14     -nq-       c14:debug
-c14:prof 	c14:prof	c14:p3913	c14     -nq-       c14:prof
-e26:debug	e26:debug	e26:p3913	e26     -nq-       e26:debug
-e26:prof	e26:prof	e26:p3913	e26     -nq-       e26:prof
+qualifier	larreco		tensorflow	triton	larfinder  libtorch  hep_hpc
+c14:debug	c14:debug	c14:p3913	c14     -nq-       c14       c14:debug
+c14:prof 	c14:prof	c14:p3913	c14     -nq-       c14       c14:prof
+e26:debug	e26:debug	e26:p3913	e26     -nq-       e26       e26:debug
+e26:prof	e26:prof	e26:p3913	e26     -nq-       e26       e26:prof
 end_qualifier_list
 ####################################
 

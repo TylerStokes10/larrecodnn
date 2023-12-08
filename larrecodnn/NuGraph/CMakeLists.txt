@@ -7,8 +7,8 @@ find_package(TorchScatter REQUIRED)
 include_directories(SYSTEM /uboone/app/users/cerati/products/torch_scatter_v2.1.2-e26/include/)
 link_directories(/uboone/app/users/cerati/products/torch_scatter_v2.1.2-e26/lib64)
 
-include_directories(SYSTEM /uboone/app/users/cerati/products/pytorch-install-v2.1.0-e26/include)
-link_directories(/uboone/app/users/cerati/products/pytorch-install-v2.1.0-e26/lib)
+# include_directories(SYSTEM /uboone/app/users/cerati/products/pytorch-install-v2.1.0-e26/include)
+# link_directories(/uboone/app/users/cerati/products/pytorch-install-v2.1.0-e26/lib)
 
 cet_build_plugin(NuGraphInference art::EDProducer
     LIBRARIES PRIVATE
@@ -66,6 +66,7 @@ cet_build_plugin(NuGraphAnalyzer art::EDAnalyzer
     ${ROOT_BASIC_LIB_LIST}
     art_root_io::TFileService_service
     ROOT::Tree
+    lardata::RecoBaseProxy
 )
 
 install_headers()

@@ -22,12 +22,13 @@
 #include <array>
 #include <limits>
 
+#include <torch/script.h>
+#include "delaunator.hpp"
+
 #include "lardataobj/RecoBase/Hit.h"
 #include "lardataobj/RecoBase/SpacePoint.h"
 #include "lardataobj/AnalysisBase/MVAOutput.h"
-
-#include <torch/script.h>
-#include "delaunator.hpp"
+#include "lardataobj/RecoBase/Vertex.h"//this creates a conflict with torch script if included before it...
 
 class NuGraphInference;
 
@@ -80,18 +81,29 @@ public:
 
 private:
   vector<std::string> planes;
+  art::InputTag hitInput;
+  art::InputTag spsInput;
   size_t minHits;
   bool debug;
   vector<vector<float> > avgs;
   vector<vector<float> > devs;
+  bool filterDecoder;
+  bool semanticDecoder;
+  bool vertexDecoder;
+  torch::jit::script::Module model;
 };
 
 
 NuGraphInference::NuGraphInference(fhicl::ParameterSet const& p)
   : EDProducer{p},
   planes(p.get<vector<std::string>>("planes")),
+  hitInput(p.get<art::InputTag>("hitInput")),
+  spsInput(p.get<art::InputTag>("spsInput")),
   minHits(p.get<size_t>("minHits")),
-  debug(p.get<bool>("debug"))
+  debug(p.get<bool>("debug")),
+  filterDecoder(p.get<bool>("filterDecoder")),
+  semanticDecoder(p.get<bool>("semanticDecoder")),
+  vertexDecoder(p.get<bool>("vertexDecoder"))
 {
 
   for (size_t ip=0;ip<planes.size();++ip) {
@@ -99,12 +111,23 @@ NuGraphInference::NuGraphInference(fhicl::ParameterSet const& p)
     devs.push_back(p.get<vector<float> >("devs_"+planes[ip]));
   }
 
-  produces< vector<FeatureVector<1> > >("filter");
-  // produces< vector<float> >("filter");
+  if (filterDecoder) {
+    produces< vector<FeatureVector<1> > >("filter");
+    // produces< vector<float> >("filter");
+  }
   //
-  produces< vector<FeatureVector<5> > >("semantic");
-  produces< MVADescription<5> >("semantic");
-  // produces< vector<vector<float> > >("semantic");
+  if (semanticDecoder) {
+    produces< vector<FeatureVector<5> > >("semantic");
+    produces< MVADescription<5> >("semantic");
+    // produces< vector<vector<float> > >("semantic");
+  }
+  //
+  if (vertexDecoder) {
+    produces< vector<recob::Vertex > >("vertex");
+  }
+
+  cet::search_path sp("FW_SEARCH_PATH");
+  model = torch::jit::load(sp.find_file(p.get<std::string>("modelFileName")));
 }
 
 void NuGraphInference::produce(art::Event& e)
@@ -112,7 +135,7 @@ void NuGraphInference::produce(art::Event& e)
 
   art::Handle< vector< Hit > > hitListHandle;
   vector< art::Ptr< Hit > > hitlist;
-  if (e.getByLabel("nuslhits", hitListHandle)) {
+  if (e.getByLabel(hitInput, hitListHandle)) {
     art::fill_ptr_vector(hitlist, hitListHandle);
   }
 
@@ -123,11 +146,20 @@ void NuGraphInference::produce(art::Event& e)
   std::unique_ptr<MVADescription<5> > semtdes(new MVADescription<5>(hitListHandle.provenance()->moduleLabel(),"semantic",{"MIP","HIP","shower","michel","diffuse"}));
   // std::unique_ptr<vector<vector<float> > > semtcol(new vector<vector<float> >(hitlist.size(),vector<float>({-1.,-1.,-1.,-1.,-1.})));
 
+  std::unique_ptr< vector<recob::Vertex> > vertcol(new vector<recob::Vertex>());
+
   if (debug) std::cout << "Hits size=" << hitlist.size() << std::endl;
   if (hitlist.size()<minHits) {
-    e.put(std::move(filtcol),"filter");
-    e.put(std::move(semtcol),"semantic");
-    e.put(std::move(semtdes),"semantic");
+    if (filterDecoder) {
+      e.put(std::move(filtcol),"filter");
+    }
+    if (semanticDecoder) {
+      e.put(std::move(semtcol),"semantic");
+      e.put(std::move(semtdes),"semantic");
+    }
+    if (vertexDecoder) {
+      e.put(std::move(vertcol),"vertex");
+    }
     return;
   }
 
@@ -198,7 +230,7 @@ void NuGraphInference::produce(art::Event& e)
   // Get spacepoints from the event record
   art::Handle< vector< SpacePoint > > spListHandle;
   vector< art::Ptr< SpacePoint > > splist;
-  if (e.getByLabel("sps", spListHandle)) {
+  if (e.getByLabel(spsInput, spListHandle)) {
       art::fill_ptr_vector(splist, spListHandle);
   }
   // Get assocations from spacepoints to hits
@@ -299,52 +331,73 @@ void NuGraphInference::produce(art::Event& e)
   inputs.push_back(edge_index_nexus);
   inputs.push_back(nexus);
   inputs.push_back(batch);
-  torch::jit::script::Module module = torch::jit::load("model.pt");
   if (debug) std::cout << "FORWARD!" << std::endl;
-  auto outputs = module.forward(inputs).toGenericDict();
+  auto outputs = model.forward(inputs).toGenericDict();
   if (debug) std::cout << "output =" << outputs << std::endl;
-  torch::Tensor f[planes.size()];
-  torch::Tensor s[planes.size()];
-  for (size_t p=0;p<planes.size();p++) {
-    s[p] = outputs.at("x_semantic").toGenericDict().at(planes[p]).toTensor();
-    f[p] = outputs.at("x_filter").toGenericDict().at(planes[p]).toTensor();
-  }
-  for (size_t p=0;p<planes.size();p++) {
-    for (int i = 0; i < s[p].sizes()[0]; ++i) {
-      size_t idx = idsmap[p][i];
-      std::array<float, 5> input({s[p][i][0].item<float>(),s[p][i][1].item<float>(),s[p][i][2].item<float>(),s[p][i][3].item<float>(),s[p][i][4].item<float>()});
-      softmax(input);
-      FeatureVector<5> semt = FeatureVector<5>(input);
-      (*semtcol)[idx] = semt;
-      // (*semtcol)[idx] = vector<float>({input.begin(),input.end()});
+  // torch::Tensor f[planes.size()];
+  // torch::Tensor s[planes.size()];
+  // torch::Tensor v;
+  if (semanticDecoder) {
+    for (size_t p=0;p<planes.size();p++) {
+      torch::Tensor s = outputs.at("x_semantic").toGenericDict().at(planes[p]).toTensor();
+      for (int i = 0; i < s.sizes()[0]; ++i) {
+	size_t idx = idsmap[p][i];
+	std::array<float, 5> input({s[i][0].item<float>(),s[i][1].item<float>(),s[i][2].item<float>(),s[i][3].item<float>(),s[i][4].item<float>()});
+	softmax(input);
+	FeatureVector<5> semt = FeatureVector<5>(input);
+	(*semtcol)[idx] = semt;
+	// (*semtcol)[idx] = vector<float>({input.begin(),input.end()});
+      }
+      if (debug) {
+	for (int j=0;j<5;j++) {
+	  std::cout <<"x_semantic category=" << j << " : ";
+	  for (size_t p=0;p<planes.size();p++) {
+	    torch::Tensor s = outputs.at("x_semantic").toGenericDict().at(planes[p]).toTensor();
+	    for (int i = 0; i < s.sizes()[0]; ++i) std::cout << s[i][j].item<float>() << ", ";
+	  }
+	  std::cout << std::endl;
+	}
+      }
     }
-    for (int i = 0; i < f[p].numel(); ++i) {
-      size_t idx = idsmap[p][i];
-      std::array<float, 1> input({f[p][i].item<float>()});
-      (*filtcol)[idx] = FeatureVector<1>(input);
-      // (*filtcol)[idx] = f[p][i].item<float>();
-    }
   }
-
-  if (debug) {
-    for (int j=0;j<5;j++) {
-      std::cout <<"x_semantic category=" << j << " : ";
+  if (filterDecoder) {
+    for (size_t p=0;p<planes.size();p++) {
+      torch::Tensor f = outputs.at("x_filter").toGenericDict().at(planes[p]).toTensor();
+      for (int i = 0; i < f.numel(); ++i) {
+	size_t idx = idsmap[p][i];
+	std::array<float, 1> input({f[i].item<float>()});
+	(*filtcol)[idx] = FeatureVector<1>(input);
+	// (*filtcol)[idx] = f[i].item<float>();
+      }
+    }
+    if (debug) {
+      std::cout <<"x_filter : ";
       for (size_t p=0;p<planes.size();p++) {
-	for (int i = 0; i < s[p].sizes()[0]; ++i) std::cout << s[p][i][j].item<float>() << ", ";
+	torch::Tensor f = outputs.at("x_filter").toGenericDict().at(planes[p]).toTensor();
+	for (int i = 0; i < f.numel(); ++i) std::cout << f[i].item<float>() << ", ";
       }
       std::cout << std::endl;
     }
-    //
-    std::cout <<"x_filter : ";
-    for (size_t p=0;p<planes.size();p++) {
-      for (int i = 0; i < f[p].numel(); ++i) std::cout << f[p][i].item<float>() << ", ";
-    }
-    std::cout << std::endl;
+  }
+  if (vertexDecoder) {
+    torch::Tensor v =  outputs.at("x_vertex").toGenericDict().at(0).toTensor();
+    double vpos[3];
+    vpos[0] = v[0].item<float>();
+    vpos[1] = v[1].item<float>();
+    vpos[2] = v[2].item<float>();
+    vertcol->push_back(recob::Vertex(vpos));
   }
 
-  e.put(std::move(filtcol),"filter");
-  e.put(std::move(semtcol),"semantic");
-  e.put(std::move(semtdes),"semantic");
+  if (filterDecoder) {
+    e.put(std::move(filtcol),"filter");
+  }
+  if (semanticDecoder) {
+    e.put(std::move(semtcol),"semantic");
+    e.put(std::move(semtdes),"semantic");
+  }
+  if (vertexDecoder) {
+    e.put(std::move(vertcol),"vertex");
+  }
 }
 
 DEFINE_ART_MODULE(NuGraphInference)

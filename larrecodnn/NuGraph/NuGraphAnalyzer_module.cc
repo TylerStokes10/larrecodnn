@@ -21,7 +21,9 @@
 #include "art_root_io/TFileService.h"
 #include "TTree.h"
 
+#include "lardataobj/RecoBase/Hit.h"
 #include "lardataobj/AnalysisBase/MVAOutput.h"
+#include "lardata/RecoBaseProxy/ProxyBase.h"
 
 class NuGraphAnalyzer;
 
@@ -74,27 +76,28 @@ NuGraphAnalyzer::NuGraphAnalyzer(fhicl::ParameterSet const& p)
 void NuGraphAnalyzer::analyze(art::Event const& e)
 {
 
-  // art::Handle< vector< float > > hfilter;
-  art::Handle< vector<anab::FeatureVector<1> > > hfilter;
-  e.getByLabel("NuGraph","filter",hfilter);
+  art::Handle< anab::MVADescription<5> > GNNDescription;
+  e.getByLabel(art::InputTag("NuGraph","semantic"),GNNDescription);
 
-  // art::Handle< vector< vector<float> > > hsemantic;
-  art::Handle< vector<anab::FeatureVector<5> > > hsemantic;
-  e.getByLabel("NuGraph","semantic",hsemantic);
+  auto const& hitsWithScores = proxy::getCollection<std::vector<recob::Hit> >(e,
+								       GNNDescription->dataTag(), 
+								       proxy::withParallelData<anab::FeatureVector<1> >(art::InputTag("NuGraph","filter")),
+								       proxy::withParallelData<anab::FeatureVector<5> >(art::InputTag("NuGraph","semantic")));
 
-  std::cout << hfilter->size() << std::endl;
-  for (size_t i=0;i<hfilter->size();i++) {
+  std::cout << hitsWithScores.size() << std::endl;
+  for (auto& h : hitsWithScores) {
+    const auto& assocFilter = h.get<anab::FeatureVector<1> >();
+    const auto& assocSemantic = h.get<anab::FeatureVector<5> >();
     _event = e.event();
     _subrun = e.subRun();
     _run = e.run();
-    _id = i;
-    _x_filter = hfilter->at(i).at(0);
-    // _x_filter = hfilter->at(i);
-    _MIP = hsemantic->at(i).at(0);
-    _HIP = hsemantic->at(i).at(1);
-    _shower = hsemantic->at(i).at(2);
-    _michel = hsemantic->at(i).at(3);
-    _diffuse = hsemantic->at(i).at(4);
+    _id = h.index();
+    _x_filter = assocFilter.at(0);
+    _MIP = assocSemantic.at(GNNDescription->getIndex("MIP"));
+    _HIP = assocSemantic.at(GNNDescription->getIndex("HIP"));
+    _shower = assocSemantic.at(GNNDescription->getIndex("shower"));
+    _michel = assocSemantic.at(GNNDescription->getIndex("michel"));
+    _diffuse = assocSemantic.at(GNNDescription->getIndex("diffuse"));
     _tree->Fill();
   }
 

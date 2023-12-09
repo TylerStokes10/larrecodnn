@@ -257,19 +257,23 @@ void NuGraphInference::produce(art::Event& e)
   auto x = torch::Dict<std::string, torch::Tensor>();
   auto batch = torch::Dict<std::string, torch::Tensor>();
   for (size_t p=0;p<planes.size();p++) {
-    if (debug) std::cout << "plane=" << p << std::endl;
     long int dim = nodeft[p].size()/4;
     torch::Tensor ix = torch::zeros({dim,4},torch::dtype(torch::kFloat32));
-    if (debug) std::cout << std::fixed;
-    if (debug) std::cout << std::setprecision(4);
-    if (debug) std::cout << "before, plane=" << planes[p] << std::endl;
-    for (size_t n=0;n<nodeft_bare[p].size();n=n+4) {
-      if (debug) std::cout << nodeft_bare[p][n] << " " << nodeft_bare[p][n+1] << " " << nodeft_bare[p][n+2] << " " << nodeft_bare[p][n+3] << " " << std::endl;
+    if (debug) {
+      std::cout << "plane=" << p << std::endl;
+      std::cout << std::fixed;
+      std::cout << std::setprecision(4);
+      std::cout << "before, plane=" << planes[p] << std::endl;
+      for (size_t n=0;n<nodeft_bare[p].size();n=n+4) {
+	std::cout << nodeft_bare[p][n] << " " << nodeft_bare[p][n+1] << " " << nodeft_bare[p][n+2] << " " << nodeft_bare[p][n+3] << " " << std::endl;
+      }
+      std::cout << std::scientific;
+      std::cout << "after, plane=" << planes[p] << std::endl;
+      for (size_t n=0;n<nodeft[p].size();n=n+4) {
+	std::cout << nodeft[p][n] << " " << nodeft[p][n+1] << " " << nodeft[p][n+2] << " " << nodeft[p][n+3] << " " << std::endl;
+      }
     }
-    if (debug) std::cout << std::scientific;
-    if (debug) std::cout << "after, plane=" << planes[p] << std::endl;
     for (size_t n=0;n<nodeft[p].size();n=n+4) {
-      if (debug) std::cout << nodeft[p][n] << " " << nodeft[p][n+1] << " " << nodeft[p][n+2] << " " << nodeft[p][n+3] << " " << std::endl;
       ix[n/4][0] = nodeft[p][n];
       ix[n/4][1] = nodeft[p][n+1];
       ix[n/4][2] = nodeft[p][n+2];
@@ -282,15 +286,6 @@ void NuGraphInference::produce(art::Event& e)
 
   auto edge_index_plane = torch::Dict<std::string, torch::Tensor>();
   for (size_t p=0;p<planes.size();p++) {
-    if (debug) std::cout << "plane=" << p << std::endl;
-    if (debug) std::cout << "2d edge size=" << edge2d[p].size() << std::endl;
-    for (size_t n=0;n<edge2d[p].size();n++) {
-      if (debug) std::cout << edge2d[p][n].n1 << " ";
-    }
-    if (debug) std::cout << std::endl;
-    for (size_t n=0;n<edge2d[p].size();n++) {
-      if (debug) std::cout << edge2d[p][n].n2 << " ";
-    }
     long int dim = edge2d[p].size();
     torch::Tensor ix = torch::zeros({2,dim},torch::dtype(torch::kInt64));
     for (size_t n=0;n<edge2d[p].size();n++) {
@@ -298,20 +293,22 @@ void NuGraphInference::produce(art::Event& e)
       ix[1][n] = int(edge2d[p][n].n2);
     }
     edge_index_plane.insert(planes[p],ix);
-    if (debug) std::cout << std::endl;
+    if (debug) {
+      std::cout << "plane=" << p << std::endl;
+      std::cout << "2d edge size=" << edge2d[p].size() << std::endl;
+      for (size_t n=0;n<edge2d[p].size();n++) {
+	std::cout << edge2d[p][n].n1 << " ";
+      }
+      std::cout << std::endl;
+      for (size_t n=0;n<edge2d[p].size();n++) {
+	std::cout << edge2d[p][n].n2 << " ";
+      }
+      std::cout << std::endl;
+    }
   }
 
   auto edge_index_nexus = torch::Dict<std::string, torch::Tensor>();
   for (size_t p=0;p<planes.size();p++) {
-    if (debug) std::cout << "plane=" << p << std::endl;
-    if (debug) std::cout << "3d edge size=" << edge3d[p].size() << std::endl;
-    for (size_t n=0;n<edge3d[p].size();n++) {
-      if (debug) std::cout << edge3d[p][n].n1 << " ";
-    }
-    if (debug) std::cout << std::endl;
-    for (size_t n=0;n<edge3d[p].size();n++) {
-      if (debug) std::cout << edge3d[p][n].n2 << " ";
-    }
     long int dim = edge3d[p].size();
     torch::Tensor ix = torch::zeros({2,dim},torch::dtype(torch::kInt64));
     for (size_t n=0;n<edge3d[p].size();n++) {
@@ -319,7 +316,18 @@ void NuGraphInference::produce(art::Event& e)
       ix[1][n] = int(edge3d[p][n].n2);
     }
     edge_index_nexus.insert(planes[p],ix);
-    if (debug) std::cout << std::endl;
+    if (debug) {
+      std::cout << "plane=" << p << std::endl;
+      std::cout << "3d edge size=" << edge3d[p].size() << std::endl;
+      for (size_t n=0;n<edge3d[p].size();n++) {
+	std::cout << edge3d[p][n].n1 << " ";
+      }
+      std::cout << std::endl;
+      for (size_t n=0;n<edge3d[p].size();n++) {
+	std::cout << edge3d[p][n].n2 << " ";
+      }
+      std::cout << std::endl;
+    }
   }
 
   long int spdim = splist.size();
@@ -334,9 +342,6 @@ void NuGraphInference::produce(art::Event& e)
   if (debug) std::cout << "FORWARD!" << std::endl;
   auto outputs = model.forward(inputs).toGenericDict();
   if (debug) std::cout << "output =" << outputs << std::endl;
-  // torch::Tensor f[planes.size()];
-  // torch::Tensor s[planes.size()];
-  // torch::Tensor v;
   if (semanticDecoder) {
     for (size_t p=0;p<planes.size();p++) {
       torch::Tensor s = outputs.at("x_semantic").toGenericDict().at(planes[p]).toTensor();

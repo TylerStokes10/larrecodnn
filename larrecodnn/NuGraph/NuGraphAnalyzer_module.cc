@@ -80,9 +80,9 @@ void NuGraphAnalyzer::analyze(art::Event const& e)
   e.getByLabel(art::InputTag("NuGraph","semantic"),GNNDescription);
 
   auto const& hitsWithScores = proxy::getCollection<std::vector<recob::Hit> >(e,
-								       GNNDescription->dataTag(), 
-								       proxy::withParallelData<anab::FeatureVector<1> >(art::InputTag("NuGraph","filter")),
-								       proxy::withParallelData<anab::FeatureVector<5> >(art::InputTag("NuGraph","semantic")));
+									      GNNDescription->dataTag(),//tag of the hit collection we ran the GNN on
+									      proxy::withParallelData<anab::FeatureVector<1> >(art::InputTag("NuGraph","filter")),
+									      proxy::withParallelData<anab::FeatureVector<5> >(art::InputTag("NuGraph","semantic")));
 
   std::cout << hitsWithScores.size() << std::endl;
   for (auto& h : hitsWithScores) {

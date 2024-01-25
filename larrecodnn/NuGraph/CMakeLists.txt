@@ -1,14 +1,4 @@
-# export CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:/uboone/app/users/cerati/products/torch_scatter_v2.1.2-e26
-# export CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:/uboone/app/users/cerati/products/pytorch-install-v2.1.0-e26
-
-# unsetup libtorch
-
-find_package(TorchScatter REQUIRED)
-include_directories(SYSTEM /uboone/app/users/cerati/products/torch_scatter_v2.1.2-e26/include/)
-link_directories(/uboone/app/users/cerati/products/torch_scatter_v2.1.2-e26/lib64)
-
-# include_directories(SYSTEM /uboone/app/users/cerati/products/pytorch-install-v2.1.0-e26/include)
-# link_directories(/uboone/app/users/cerati/products/pytorch-install-v2.1.0-e26/lib)
+link_directories($ENV{TORCH_SCATTER_LIB})
 
 cet_build_plugin(NuGraphInference art::EDProducer
     LIBRARIES PRIVATE

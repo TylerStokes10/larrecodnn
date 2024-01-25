@@ -22,7 +22,7 @@
 #include <limits>
 #include <memory>
 
-#include "delaunator.hpp"
+#include "Delaunator/delaunator.hpp"
 #include <torch/script.h>
 
 #include "lardataobj/AnalysisBase/MVAOutput.h"

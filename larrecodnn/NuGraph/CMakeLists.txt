@@ -1,5 +1,3 @@
-link_directories($ENV{TORCH_SCATTER_LIB})
-
 cet_build_plugin(NuGraphInference art::EDProducer
     LIBRARIES PRIVATE
     ${ART_FRAMEWORK_PRINCIPAL}
@@ -16,8 +14,8 @@ cet_build_plugin(NuGraphInference art::EDProducer
     ${FHICLCPP}
     ${ROOT_BASIC_LIB_LIST}
     lardataobj::RecoBase
-    torch
-    torchscatter
+    ${TORCH_LIBRARIES}
+    TorchScatter::TorchScatter
 )
 
 cet_build_plugin(PandoraNuSliceHitsProducer art::EDProducer

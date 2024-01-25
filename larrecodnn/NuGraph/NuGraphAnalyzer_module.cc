@@ -18,12 +18,12 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
 // saving output
-#include "art_root_io/TFileService.h"
 #include "TTree.h"
+#include "art_root_io/TFileService.h"
 
-#include "lardataobj/RecoBase/Hit.h"
-#include "lardataobj/AnalysisBase/MVAOutput.h"
 #include "lardata/RecoBaseProxy/ProxyBase.h"
+#include "lardataobj/AnalysisBase/MVAOutput.h"
+#include "lardataobj/RecoBase/Hit.h"
 
 class NuGraphAnalyzer;
 
@@ -45,17 +45,14 @@ public:
   void analyze(art::Event const& e) override;
 
 private:
-
   // Declare member data here.
-  TTree *_tree;
+  TTree* _tree;
   int _run, _subrun, _event, _id;
   float _x_filter, _MIP, _HIP, _shower, _michel, _diffuse;
 };
 
-
-NuGraphAnalyzer::NuGraphAnalyzer(fhicl::ParameterSet const& p)
-  : EDAnalyzer{p}  // ,
-  // More initializers here.
+NuGraphAnalyzer::NuGraphAnalyzer(fhicl::ParameterSet const& p) : EDAnalyzer{p} // ,
+// More initializers here.
 {
   // Call appropriate consumes<>() for any products to be retrieved by this module.
   art::ServiceHandle<art::TFileService> tfs;
@@ -70,24 +67,24 @@ NuGraphAnalyzer::NuGraphAnalyzer(fhicl::ParameterSet const& p)
   _tree->Branch("shower", &_shower, "shower/F");
   _tree->Branch("michel", &_michel, "michel/F");
   _tree->Branch("diffuse", &_diffuse, "diffuse/F");
-
 }
 
 void NuGraphAnalyzer::analyze(art::Event const& e)
 {
 
-  art::Handle< anab::MVADescription<5> > GNNDescription;
-  e.getByLabel(art::InputTag("NuGraph","semantic"),GNNDescription);
+  art::Handle<anab::MVADescription<5>> GNNDescription;
+  e.getByLabel(art::InputTag("NuGraph", "semantic"), GNNDescription);
 
-  auto const& hitsWithScores = proxy::getCollection<std::vector<recob::Hit> >(e,
-									      GNNDescription->dataTag(),//tag of the hit collection we ran the GNN on
-									      proxy::withParallelData<anab::FeatureVector<1> >(art::InputTag("NuGraph","filter")),
-									      proxy::withParallelData<anab::FeatureVector<5> >(art::InputTag("NuGraph","semantic")));
+  auto const& hitsWithScores = proxy::getCollection<std::vector<recob::Hit>>(
+    e,
+    GNNDescription->dataTag(), //tag of the hit collection we ran the GNN on
+    proxy::withParallelData<anab::FeatureVector<1>>(art::InputTag("NuGraph", "filter")),
+    proxy::withParallelData<anab::FeatureVector<5>>(art::InputTag("NuGraph", "semantic")));
 
   std::cout << hitsWithScores.size() << std::endl;
   for (auto& h : hitsWithScores) {
-    const auto& assocFilter = h.get<anab::FeatureVector<1> >();
-    const auto& assocSemantic = h.get<anab::FeatureVector<5> >();
+    const auto& assocFilter = h.get<anab::FeatureVector<1>>();
+    const auto& assocSemantic = h.get<anab::FeatureVector<5>>();
     _event = e.event();
     _subrun = e.subRun();
     _run = e.run();
@@ -100,7 +97,6 @@ void NuGraphAnalyzer::analyze(art::Event const& e)
     _diffuse = assocSemantic.at(GNNDescription->getIndex("diffuse"));
     _tree->Fill();
   }
-
 }
 
 DEFINE_ART_MODULE(NuGraphAnalyzer)

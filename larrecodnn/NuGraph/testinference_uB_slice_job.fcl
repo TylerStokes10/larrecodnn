@@ -67,6 +67,8 @@ physics.producers.sps.HitLabel: "nuslhits"
 physics.producers.sps.WireIntersectThreshold: 0.3
 physics.producers.sps.WireIntersectThresholdDriftDir: 0.3
 
+#physics.producers.NuGraph.debug: true
+
 #services.message.destinations.LogStandardOut.threshold: "INFO"
 #services.message.destinations.LogDebugFile.threshold: "ERROR"
 #services.message.debugModules: []

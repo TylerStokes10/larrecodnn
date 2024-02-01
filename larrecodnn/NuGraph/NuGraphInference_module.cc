@@ -231,6 +231,14 @@ void NuGraphInference::produce(art::Event& e)
     edge2d[p].erase(std::unique(edge2d[p].begin(), edge2d[p].end()), edge2d[p].end());
   }
 
+  if (debug) {
+    for (size_t p = 0; p < planes.size(); p++) {
+      for (auto& e : edge2d[p]) {
+	std::cout <<" plane=" << p << " e1=" << e.n1 << " e2=" << e.n2 << std::endl;
+      }
+    }
+  }
+
   // Get spacepoints from the event record
   art::Handle<vector<SpacePoint>> spListHandle;
   vector<art::Ptr<SpacePoint>> splist;

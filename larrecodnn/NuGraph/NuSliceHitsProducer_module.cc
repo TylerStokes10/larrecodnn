@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////
-// Class:       PandoraNuSliceHitsProducer
+// Class:       NuSliceHitsProducer
 // Plugin Type: producer (art v3_06_03)
-// File:        PandoraNuSliceHitsProducer_module.cc
+// File:        NuSliceHitsProducer_module.cc
 //
 // Generated at Tue May 25 10:39:19 2021 by Giuseppe Cerati using cetskelgen
 // from cetlib version v3_11_01.
@@ -29,22 +29,22 @@
 #include "lardataobj/RecoBase/Slice.h"
 #include "nusimdata/SimulationBase/MCParticle.h"
 
-class PandoraNuSliceHitsProducer;
+class NuSliceHitsProducer;
 
 using HitParticleAssociations =
   art::Assns<simb::MCParticle, recob::Hit, anab::BackTrackerHitMatchingData>;
 
-class PandoraNuSliceHitsProducer : public art::EDProducer {
+class NuSliceHitsProducer : public art::EDProducer {
 public:
-  explicit PandoraNuSliceHitsProducer(fhicl::ParameterSet const& p);
+  explicit NuSliceHitsProducer(fhicl::ParameterSet const& p);
   // The compiler-generated destructor is fine for non-base
   // classes without bare pointers or other resource use.
 
   // Plugins should not be copied or assigned.
-  PandoraNuSliceHitsProducer(PandoraNuSliceHitsProducer const&) = delete;
-  PandoraNuSliceHitsProducer(PandoraNuSliceHitsProducer&&) = delete;
-  PandoraNuSliceHitsProducer& operator=(PandoraNuSliceHitsProducer const&) = delete;
-  PandoraNuSliceHitsProducer& operator=(PandoraNuSliceHitsProducer&&) = delete;
+  NuSliceHitsProducer(NuSliceHitsProducer const&) = delete;
+  NuSliceHitsProducer(NuSliceHitsProducer&&) = delete;
+  NuSliceHitsProducer& operator=(NuSliceHitsProducer const&) = delete;
+  NuSliceHitsProducer& operator=(NuSliceHitsProducer&&) = delete;
 
   // Required functions.
   void produce(art::Event& e) override;
@@ -57,7 +57,7 @@ private:
   std::string fHitTruthLabel;
 };
 
-PandoraNuSliceHitsProducer::PandoraNuSliceHitsProducer(fhicl::ParameterSet const& p)
+NuSliceHitsProducer::NuSliceHitsProducer(fhicl::ParameterSet const& p)
   : EDProducer{p}
   , fPfpLabel(p.get<std::string>("PfpLabel", "pandora"))
   , fSliceLabel(p.get<std::string>("SliceLabel", "pandora"))
@@ -72,7 +72,7 @@ PandoraNuSliceHitsProducer::PandoraNuSliceHitsProducer(fhicl::ParameterSet const
   // Call appropriate consumes<>() for any products to be retrieved by this module.
 }
 
-void PandoraNuSliceHitsProducer::produce(art::Event& e)
+void NuSliceHitsProducer::produce(art::Event& e)
 {
   // Implementation of required member function here.
 
@@ -124,4 +124,4 @@ void PandoraNuSliceHitsProducer::produce(art::Event& e)
   e.put(std::move(outputHitPartAssns));
 }
 
-DEFINE_ART_MODULE(PandoraNuSliceHitsProducer)
+DEFINE_ART_MODULE(NuSliceHitsProducer)

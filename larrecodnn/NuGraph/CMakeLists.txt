@@ -7,6 +7,7 @@ cet_build_plugin(NuGraphInference art::EDProducer
     ${ART_PERSISTENCY_PROVENANCE}
     ${ART_ROOT_IO_TFILE_SUPPORT}
     ${ROOT_CORE}
+    ${ROOT_MATH}
     ${ART_ROOT_IO_TFILESERVICE_SERVICE}
     ${ART_PERSISTENCY_COMMON}
     ${ART_UTILITIES}
@@ -18,7 +19,7 @@ cet_build_plugin(NuGraphInference art::EDProducer
     TorchScatter::TorchScatter
 )
 
-cet_build_plugin(PandoraNuSliceHitsProducer art::EDProducer
+cet_build_plugin(NuSliceHitsProducer art::EDProducer
     LIBRARIES PRIVATE
     ${ART_FRAMEWORK_PRINCIPAL}
     ${ART_FRAMEWORK_SERVICES_REGISTRY}

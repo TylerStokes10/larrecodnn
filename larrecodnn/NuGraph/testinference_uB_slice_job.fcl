@@ -50,7 +50,7 @@ physics:
 
   producers:
   {
-    nuslhits: { module_type: "PandoraNuSliceHitsProducer" }
+    nuslhits: { module_type: "NuSliceHitsProducer" }
     sps: @local::standard_spacepointsolver
     NuGraph: @local::NuGraph
   }

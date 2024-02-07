@@ -1,4 +1,3 @@
-include_directories($ENV{DELAUNATOR_INC})
 
 cet_build_plugin(NuGraphInference art::EDProducer
     LIBRARIES PRIVATE
@@ -19,7 +18,11 @@ cet_build_plugin(NuGraphInference art::EDProducer
     lardataobj::RecoBase
     ${TORCH_LIBRARIES}
     TorchScatter::TorchScatter
+    IMPL_TARGET_VAR NuGraphInference_module
 )
+
+find_path(DELAUNATOR_INC delaunator.hpp HINTS ENV DELAUNATOR_INC REQUIRED DOC "Header location for delaunator_cpp")
+target_include_directories(${NuGraphInference_module} PRIVATE ${DELAUNATOR_INC})
 
 cet_build_plugin(NuSliceHitsProducer art::EDProducer
     LIBRARIES PRIVATE

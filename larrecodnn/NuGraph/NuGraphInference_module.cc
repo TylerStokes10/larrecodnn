@@ -112,13 +112,11 @@ NuGraphInference::NuGraphInference(fhicl::ParameterSet const& p)
 
   if (filterDecoder) {
     produces<vector<FeatureVector<1>>>("filter");
-    // produces< vector<float> >("filter");
   }
   //
   if (semanticDecoder) {
     produces<vector<FeatureVector<5>>>("semantic");
     produces<MVADescription<5>>("semantic");
-    // produces< vector<vector<float> > >("semantic");
   }
   //
   if (vertexDecoder) { produces<vector<recob::Vertex>>("vertex"); }
@@ -136,7 +134,6 @@ void NuGraphInference::produce(art::Event& e)
 
   std::unique_ptr<vector<FeatureVector<1>>> filtcol(
     new vector<FeatureVector<1>>(hitlist.size(), FeatureVector<1>(std::array<float, 1>({-1.}))));
-  // std::unique_ptr< vector<float> > filtcol(new vector<float>(hitlist.size(),-1.));
 
   std::unique_ptr<vector<FeatureVector<5>>> semtcol(new vector<FeatureVector<5>>(
     hitlist.size(), FeatureVector<5>(std::array<float, 5>({-1., -1., -1., -1., -1.}))));
@@ -144,7 +141,6 @@ void NuGraphInference::produce(art::Event& e)
     new MVADescription<5>(hitListHandle.provenance()->moduleLabel(),
                           "semantic",
                           {"MIP", "HIP", "shower", "michel", "diffuse"}));
-  // std::unique_ptr<vector<vector<float> > > semtcol(new vector<vector<float> >(hitlist.size(),vector<float>({-1.,-1.,-1.,-1.,-1.})));
 
   std::unique_ptr<vector<recob::Vertex>> vertcol(new vector<recob::Vertex>());
 
@@ -369,7 +365,6 @@ void NuGraphInference::produce(art::Event& e)
         softmax(input);
         FeatureVector<5> semt = FeatureVector<5>(input);
         (*semtcol)[idx] = semt;
-        // (*semtcol)[idx] = vector<float>({input.begin(),input.end()});
       }
       if (debug) {
         for (int j = 0; j < 5; j++) {
@@ -391,7 +386,6 @@ void NuGraphInference::produce(art::Event& e)
         size_t idx = idsmap[p][i];
         std::array<float, 1> input({f[i].item<float>()});
         (*filtcol)[idx] = FeatureVector<1>(input);
-        // (*filtcol)[idx] = f[i].item<float>();
       }
     }
     if (debug) {

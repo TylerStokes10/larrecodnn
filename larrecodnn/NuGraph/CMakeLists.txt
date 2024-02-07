@@ -1,3 +1,5 @@
+include_directories($ENV{DELAUNATOR_INC})
+
 cet_build_plugin(NuGraphInference art::EDProducer
     LIBRARIES PRIVATE
     ${ART_FRAMEWORK_PRINCIPAL}

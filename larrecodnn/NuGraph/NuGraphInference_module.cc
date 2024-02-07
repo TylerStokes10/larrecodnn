@@ -22,7 +22,7 @@
 #include <limits>
 #include <memory>
 
-#include "Math/Delaunay2D.h"
+#include "delaunator.hpp"
 #include <torch/script.h>
 
 #include "lardataobj/AnalysisBase/MVAOutput.h"
@@ -161,15 +161,14 @@ void NuGraphInference::produce(art::Event& e)
 
   vector<vector<float>> nodeft_bare(planes.size(), vector<float>());
   vector<vector<float>> nodeft(planes.size(), vector<float>());
-  vector<vector<double>> coordsX(planes.size(), vector<double>());
-  vector<vector<double>> coordsY(planes.size(), vector<double>());
+  vector<vector<double>> coords(planes.size(), vector<double>());
   vector<vector<size_t>> idsmap(planes.size(), vector<size_t>());
   vector<size_t> idsmapRev(hitlist.size(), hitlist.size());
   for (auto h : hitlist) {
     idsmap[h->View()].push_back(h.key());
     idsmapRev[h.key()] = idsmap[h->View()].size() - 1;
-    coordsX[h->View()].push_back(h->PeakTime() * 0.055);
-    coordsY[h->View()].push_back(h->WireID().Wire * 0.3);
+    coords[h->View()].push_back(h->PeakTime() * 0.055);
+    coords[h->View()].push_back(h->WireID().Wire * 0.3);
     nodeft[h->View()].push_back((h->WireID().Wire * 0.3 - avgs[h->View()][0]) / devs[h->View()][0]);
     nodeft[h->View()].push_back((h->PeakTime() * 0.055 - avgs[h->View()][1]) / devs[h->View()][1]);
     nodeft[h->View()].push_back((h->Integral() - avgs[h->View()][2]) / devs[h->View()][2]);
@@ -193,34 +192,32 @@ void NuGraphInference::produce(art::Event& e)
   };
   vector<vector<Edge>> edge2d(planes.size(), vector<Edge>());
   for (size_t p = 0; p < planes.size(); p++) {
-    if (debug) std::cout << "Plane " << p << " has N hits=" << coordsX[p].size() << std::endl;
-    if (coordsX[p].size() < 3) continue;
-    std::vector<double> z(coordsX[p].size(),0.);
-    ROOT::Math::Delaunay2D d2(coordsX[p].size(),coordsX[p].data(),coordsY[p].data(),z.data());
-    d2.FindAllTriangles();
-    if (debug) std::cout << "Found N triangles=" << d2.NumberOfTriangles() << std::endl;
-    for (const auto& t : d2) {
+    if (debug) std::cout << "Plane " << p << " has N hits=" << coords[p].size() / 2 << std::endl;
+    if (coords[p].size() / 2 < 3) continue;
+    delaunator::Delaunator d(coords[p]);
+    if (debug) std::cout << "Found N triangles=" << d.triangles.size() / 3 << std::endl;
+    for (std::size_t i = 0; i < d.triangles.size(); i += 3) {
       //create edges in both directions
       Edge e;
-      e.n1 = t.idx[0];
-      e.n2 = t.idx[1];
+      e.n1 = d.triangles[i];
+      e.n2 = d.triangles[i + 1];
       edge2d[p].push_back(e);
-      e.n1 = t.idx[1];
-      e.n2 = t.idx[0];
-      edge2d[p].push_back(e);
-      //
-      e.n1 = t.idx[0];
-      e.n2 = t.idx[2];
-      edge2d[p].push_back(e);
-      e.n1 = t.idx[2];
-      e.n2 = t.idx[0];
+      e.n1 = d.triangles[i + 1];
+      e.n2 = d.triangles[i];
       edge2d[p].push_back(e);
       //
-      e.n1 = t.idx[1];
-      e.n2 = t.idx[2];
+      e.n1 = d.triangles[i];
+      e.n2 = d.triangles[i + 2];
       edge2d[p].push_back(e);
-      e.n1 = t.idx[2];
-      e.n2 = t.idx[1];
+      e.n1 = d.triangles[i + 2];
+      e.n2 = d.triangles[i];
+      edge2d[p].push_back(e);
+      //
+      e.n1 = d.triangles[i + 1];
+      e.n2 = d.triangles[i + 2];
+      edge2d[p].push_back(e);
+      e.n1 = d.triangles[i + 2];
+      e.n2 = d.triangles[i + 1];
       edge2d[p].push_back(e);
       //
     }
@@ -228,6 +225,11 @@ void NuGraphInference::produce(art::Event& e)
     std::sort(edge2d[p].begin(), edge2d[p].end(), [](const auto& i, const auto& j) {
       return (i.n1 != j.n1 ? i.n1 < j.n1 : i.n2 < j.n2);
     });
+    if (debug) {
+      for (auto& e : edge2d[p]) {
+	std::cout <<"sorted plane=" << p << " e1=" << e.n1 << " e2=" << e.n2 << std::endl;
+      }
+    }
     edge2d[p].erase(std::unique(edge2d[p].begin(), edge2d[p].end()), edge2d[p].end());
   }
 

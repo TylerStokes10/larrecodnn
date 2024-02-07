@@ -110,9 +110,7 @@ NuGraphInference::NuGraphInference(fhicl::ParameterSet const& p)
     devs.push_back(p.get<vector<float>>("devs_" + planes[ip]));
   }
 
-  if (filterDecoder) {
-    produces<vector<FeatureVector<1>>>("filter");
-  }
+  if (filterDecoder) { produces<vector<FeatureVector<1>>>("filter"); }
   //
   if (semanticDecoder) {
     produces<vector<FeatureVector<5>>>("semantic");
@@ -223,7 +221,7 @@ void NuGraphInference::produce(art::Event& e)
     });
     if (debug) {
       for (auto& e : edge2d[p]) {
-	std::cout <<"sorted plane=" << p << " e1=" << e.n1 << " e2=" << e.n2 << std::endl;
+        std::cout << "sorted plane=" << p << " e1=" << e.n1 << " e2=" << e.n2 << std::endl;
       }
     }
     edge2d[p].erase(std::unique(edge2d[p].begin(), edge2d[p].end()), edge2d[p].end());
@@ -232,7 +230,7 @@ void NuGraphInference::produce(art::Event& e)
   if (debug) {
     for (size_t p = 0; p < planes.size(); p++) {
       for (auto& e : edge2d[p]) {
-	std::cout <<" plane=" << p << " e1=" << e.n1 << " e2=" << e.n2 << std::endl;
+        std::cout << " plane=" << p << " e1=" << e.n1 << " e2=" << e.n2 << std::endl;
       }
     }
   }

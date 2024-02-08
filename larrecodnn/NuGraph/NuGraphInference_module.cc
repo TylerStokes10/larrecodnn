@@ -37,7 +37,6 @@ using anab::MVADescription;
 using recob::Hit;
 using recob::SpacePoint;
 using std::array;
-using std::pair;
 using std::vector;
 
 namespace {
@@ -176,7 +175,7 @@ void NuGraphInference::produce(art::Event& e)
   struct Edge {
     size_t n1;
     size_t n2;
-    bool operator==(Edge& other) const
+    bool operator==(const Edge& other) const
     {
       if (this->n1 == other.n1 && this->n2 == other.n2)
         return true;

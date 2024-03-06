@@ -98,10 +98,11 @@ nnet::NoiseWaveformDump::NoiseWaveformDump(fhicl::ParameterSet const& p)
   , fShortWaveformSize(p.get<unsigned int>("ShortWaveformSize"))
   , fPlaneToDump(p.get<std::string>("PlaneToDump"))
   , fMaxNoiseChannelsPerEvent(p.get<int>("MaxNoiseChannelsPerEvent"))
-  , fRandFlat{createEngine(art::ServiceHandle<rndm::NuRandomService> {}
-                             ->declareEngine(instanceName, p, "SeedForNoiseWaveformDump"),
-                           "HepJamesRandom",
-                           instanceName)}
+  , fRandFlat{createEngine(
+      art::ServiceHandle<rndm::NuRandomService> {}
+      -> declareEngine(instanceName, p, "SeedForNoiseWaveformDump"),
+      "HepJamesRandom",
+      instanceName)}
 {
   if (std::getenv("CLUSTER") && std::getenv("PROCESS")) {
     fDumpWaveformsFileName +=

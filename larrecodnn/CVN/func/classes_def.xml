@@ -75,6 +75,10 @@
 
   <class name="std::vector<std::vector<std::string>>" />
   <class name="std::vector<std::vector<std::vector<std::string>>>" />
+
+  <class name="anab::MVADescription<8>" />
+  <class name="art::Wrapper<anab::MVADescription<8>>" />
+
     
 </lcgdict>
 

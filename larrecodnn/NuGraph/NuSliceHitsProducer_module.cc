@@ -31,8 +31,7 @@
 
 class NuSliceHitsProducer;
 
-using HitParticleAssociations =
-  art::Assns<simb::MCParticle, recob::Hit, anab::BackTrackerHitMatchingData>;
+using HitParticleAssociations = art::Assns<simb::MCParticle, recob::Hit, anab::BackTrackerHitMatchingData>;
 
 class NuSliceHitsProducer : public art::EDProducer {
 public:
@@ -63,13 +62,18 @@ NuSliceHitsProducer::NuSliceHitsProducer(fhicl::ParameterSet const& p)
   , fSliceLabel(p.get<std::string>("SliceLabel", "pandora"))
   , fHitLabel(p.get<std::string>("HitLabel", "gaushit"))
   , fHitTruthLabel(p.get<std::string>("HitTruthLabel", "gaushitTruthMatch"))
-// More initializers here.
 {
   // Call appropriate produces<>() functions here.
   produces<std::vector<recob::Hit>>();
   produces<HitParticleAssociations>();
 
-  // Call appropriate consumes<>() for any products to be retrieved by this module.
+  // Declare consumed products
+  consumes<std::vector<recob::PFParticle>>(fPfpLabel);
+  consumes<art::Assns<recob::PFParticle, recob::Slice>>(fPfpLabel);
+  consumes<std::vector<recob::Slice>>(fSliceLabel);
+  consumes<art::Assns<recob::Slice, recob::Hit>>(fSliceLabel);
+  consumes<std::vector<recob::Hit>>(fHitLabel);
+  consumes<art::Assns<recob::Hit, simb::MCParticle, anab::BackTrackerHitMatchingData>>(fHitTruthLabel);
 }
 
 void NuSliceHitsProducer::produce(art::Event& e)
@@ -82,16 +86,26 @@ void NuSliceHitsProducer::produce(art::Event& e)
 
   art::ValidHandle<std::vector<recob::PFParticle>> inputPfp =
     e.getValidHandle<std::vector<recob::PFParticle>>(fPfpLabel);
+  std::cout << "Got PFParticle handle with size: " << inputPfp->size() << std::endl;
+
   auto assocPfpSlice = std::unique_ptr<art::FindManyP<recob::Slice>>(
     new art::FindManyP<recob::Slice>(inputPfp, e, fPfpLabel));
 
   art::ValidHandle<std::vector<recob::Slice>> inputSlice =
     e.getValidHandle<std::vector<recob::Slice>>(fSliceLabel);
+  std::cout << "Got Slice handle with size: " << inputSlice->size() << std::endl;
+
   auto assocSliceHit = std::unique_ptr<art::FindManyP<recob::Hit>>(
     new art::FindManyP<recob::Hit>(inputSlice, e, fSliceLabel));
 
   art::Handle<std::vector<recob::Hit>> hitListHandle;
-  e.getByLabel(fHitLabel, hitListHandle);
+  if (e.getByLabel(fHitLabel, hitListHandle)) {
+    std::cout << "Got Hit handle with size: " << hitListHandle->size() << std::endl;
+  } else {
+    std::cerr << "Error: Could not get hit list handle for label " << fHitLabel << std::endl;
+    return;
+  }
+
   std::unique_ptr<art::FindManyP<simb::MCParticle, anab::BackTrackerHitMatchingData>> hittruth =
     std::unique_ptr<art::FindManyP<simb::MCParticle, anab::BackTrackerHitMatchingData>>(
       new art::FindManyP<simb::MCParticle, anab::BackTrackerHitMatchingData>(
@@ -100,12 +114,10 @@ void NuSliceHitsProducer::produce(art::Event& e)
   for (size_t ipfp = 0; ipfp < inputPfp->size(); ipfp++) {
 
     art::Ptr<recob::PFParticle> pfp(inputPfp, ipfp);
-    if (pfp->IsPrimary() == false) continue;
-    auto PDG = fabs(pfp->PdgCode());
-    if (PDG != 12 && PDG != 14) continue;
-
     auto assocSlice = assocPfpSlice->at(pfp.key());
     auto sliceHits = assocSliceHit->at(assocSlice[0].key());
+
+    std::cout << "Number of slice hits: " << sliceHits.size() << std::endl;
 
     for (size_t ihit = 0; ihit < sliceHits.size(); ++ihit) {
       auto hit = sliceHits.at(ihit);
@@ -114,6 +126,9 @@ void NuSliceHitsProducer::produce(art::Event& e)
       std::vector<art::Ptr<simb::MCParticle>> particle_vec = hittruth->at(hit.key());
       std::vector<anab::BackTrackerHitMatchingData const*> match_vec = hittruth->data(hit.key());
       const art::Ptr<recob::Hit> ahp = hitPtrMaker(outputHits->size() - 1);
+
+      std::cout << "Particle vec size: " << particle_vec.size() << ", Match vec size: " << match_vec.size() << std::endl;
+
       for (size_t i_p = 0; i_p < particle_vec.size(); ++i_p) {
         outputHitPartAssns->addSingle(particle_vec[i_p], ahp, *match_vec[i_p]);
       }
@@ -125,3 +140,4 @@ void NuSliceHitsProducer::produce(art::Event& e)
 }
 
 DEFINE_ART_MODULE(NuSliceHitsProducer)
+

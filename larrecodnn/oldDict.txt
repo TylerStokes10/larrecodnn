@@ -1,0 +1,230 @@
+// Do NOT change. Changes will be lost next time file is generated
+
+#define R__DICTIONARY_FILENAME MyDict
+#define R__NO_DEPRECATION
+
+/*******************************************************************/
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#define G__DICTIONARY
+#include "RConfig.h"
+#include "TClass.h"
+#include "TDictAttributeMap.h"
+#include "TInterpreter.h"
+#include "TROOT.h"
+#include "TBuffer.h"
+#include "TMemberInspector.h"
+#include "TInterpreter.h"
+#include "TVirtualMutex.h"
+#include "TError.h"
+
+#ifndef G__ROOT
+#define G__ROOT
+#endif
+
+#include "RtypesImp.h"
+#include "TIsAProxy.h"
+#include "TFileMergeInfo.h"
+#include <algorithm>
+#include "TCollectionProxyInfo.h"
+/*******************************************************************/
+
+#include "TDataMember.h"
+
+// Header files passed as explicit arguments
+#include "classes.h"
+
+// Header files passed via #pragma extra_include
+
+// The generated code does not explicitly qualify STL entities
+namespace std {} using namespace std;
+
+namespace ROOT {
+   static TClass *anabcLcLFeatureVectorlE8gR_Dictionary();
+   static void anabcLcLFeatureVectorlE8gR_TClassManip(TClass*);
+   static void *new_anabcLcLFeatureVectorlE8gR(void *p = nullptr);
+   static void *newArray_anabcLcLFeatureVectorlE8gR(Long_t size, void *p);
+   static void delete_anabcLcLFeatureVectorlE8gR(void *p);
+   static void deleteArray_anabcLcLFeatureVectorlE8gR(void *p);
+   static void destruct_anabcLcLFeatureVectorlE8gR(void *p);
+
+   // Function generating the singleton type initializer
+   static TGenericClassInfo *GenerateInitInstanceLocal(const ::anab::FeatureVector<8>*)
+   {
+      ::anab::FeatureVector<8> *ptr = nullptr;
+      static ::TVirtualIsAProxy* isa_proxy = new ::TIsAProxy(typeid(::anab::FeatureVector<8>));
+      static ::ROOT::TGenericClassInfo
+         instance("anab::FeatureVector<8>", ::anab::FeatureVector<8>::Class_Version(), "lardataobj/AnalysisBase/MVAOutput.h", 24,
+                  typeid(::anab::FeatureVector<8>), ::ROOT::Internal::DefineBehavior(ptr, ptr),
+                  &anabcLcLFeatureVectorlE8gR_Dictionary, isa_proxy, 4,
+                  sizeof(::anab::FeatureVector<8>) );
+      instance.SetNew(&new_anabcLcLFeatureVectorlE8gR);
+      instance.SetNewArray(&newArray_anabcLcLFeatureVectorlE8gR);
+      instance.SetDelete(&delete_anabcLcLFeatureVectorlE8gR);
+      instance.SetDeleteArray(&deleteArray_anabcLcLFeatureVectorlE8gR);
+      instance.SetDestructor(&destruct_anabcLcLFeatureVectorlE8gR);
+
+      ::ROOT::AddClassAlternate("anab::FeatureVector<8>","anab::FeatureVector<8ul>");
+      return &instance;
+   }
+   TGenericClassInfo *GenerateInitInstance(const ::anab::FeatureVector<8>*)
+   {
+      return GenerateInitInstanceLocal((::anab::FeatureVector<8>*)nullptr);
+   }
+   // Static variable to force the class initialization
+   static ::ROOT::TGenericClassInfo *_R__UNIQUE_DICT_(Init) = GenerateInitInstanceLocal((const ::anab::FeatureVector<8>*)nullptr); R__UseDummy(_R__UNIQUE_DICT_(Init));
+
+   // Dictionary for non-ClassDef classes
+   static TClass *anabcLcLFeatureVectorlE8gR_Dictionary() {
+      TClass* theClass =::ROOT::GenerateInitInstanceLocal((const ::anab::FeatureVector<8>*)nullptr)->GetClass();
+      anabcLcLFeatureVectorlE8gR_TClassManip(theClass);
+   return theClass;
+   }
+
+   static void anabcLcLFeatureVectorlE8gR_TClassManip(TClass* ){
+   }
+
+} // end of namespace ROOT
+
+namespace ROOT {
+   static TClass *anabcLcLMVADescriptionlE8gR_Dictionary();
+   static void anabcLcLMVADescriptionlE8gR_TClassManip(TClass*);
+   static void *new_anabcLcLMVADescriptionlE8gR(void *p = nullptr);
+   static void *newArray_anabcLcLMVADescriptionlE8gR(Long_t size, void *p);
+   static void delete_anabcLcLMVADescriptionlE8gR(void *p);
+   static void deleteArray_anabcLcLMVADescriptionlE8gR(void *p);
+   static void destruct_anabcLcLMVADescriptionlE8gR(void *p);
+
+   // Function generating the singleton type initializer
+   static TGenericClassInfo *GenerateInitInstanceLocal(const ::anab::MVADescription<8>*)
+   {
+      ::anab::MVADescription<8> *ptr = nullptr;
+      static ::TVirtualIsAProxy* isa_proxy = new ::TIsAProxy(typeid(::anab::MVADescription<8>));
+      static ::ROOT::TGenericClassInfo
+         instance("anab::MVADescription<8>", ::anab::MVADescription<8>::Class_Version(), "classes.h", 4,
+                  typeid(::anab::MVADescription<8>), ::ROOT::Internal::DefineBehavior(ptr, ptr),
+                  &anabcLcLMVADescriptionlE8gR_Dictionary, isa_proxy, 4,
+                  sizeof(::anab::MVADescription<8>) );
+      instance.SetNew(&new_anabcLcLMVADescriptionlE8gR);
+      instance.SetNewArray(&newArray_anabcLcLMVADescriptionlE8gR);
+      instance.SetDelete(&delete_anabcLcLMVADescriptionlE8gR);
+      instance.SetDeleteArray(&deleteArray_anabcLcLMVADescriptionlE8gR);
+      instance.SetDestructor(&destruct_anabcLcLMVADescriptionlE8gR);
+
+      ::ROOT::AddClassAlternate("anab::MVADescription<8>","anab::MVADescription<8ul>");
+      return &instance;
+   }
+   TGenericClassInfo *GenerateInitInstance(const ::anab::MVADescription<8>*)
+   {
+      return GenerateInitInstanceLocal((::anab::MVADescription<8>*)nullptr);
+   }
+   // Static variable to force the class initialization
+   static ::ROOT::TGenericClassInfo *_R__UNIQUE_DICT_(Init) = GenerateInitInstanceLocal((const ::anab::MVADescription<8>*)nullptr); R__UseDummy(_R__UNIQUE_DICT_(Init));
+
+   // Dictionary for non-ClassDef classes
+   static TClass *anabcLcLMVADescriptionlE8gR_Dictionary() {
+      TClass* theClass =::ROOT::GenerateInitInstanceLocal((const ::anab::MVADescription<8>*)nullptr)->GetClass();
+      anabcLcLMVADescriptionlE8gR_TClassManip(theClass);
+   return theClass;
+   }
+
+   static void anabcLcLMVADescriptionlE8gR_TClassManip(TClass* ){
+   }
+
+} // end of namespace ROOT
+
+namespace ROOT {
+   // Wrappers around operator new
+   static void *new_anabcLcLFeatureVectorlE8gR(void *p) {
+      return  p ? ::new((::ROOT::Internal::TOperatorNewHelper*)p) ::anab::FeatureVector<8> : new ::anab::FeatureVector<8>;
+   }
+   static void *newArray_anabcLcLFeatureVectorlE8gR(Long_t nElements, void *p) {
+      return p ? ::new((::ROOT::Internal::TOperatorNewHelper*)p) ::anab::FeatureVector<8>[nElements] : new ::anab::FeatureVector<8>[nElements];
+   }
+   // Wrapper around operator delete
+   static void delete_anabcLcLFeatureVectorlE8gR(void *p) {
+      delete ((::anab::FeatureVector<8>*)p);
+   }
+   static void deleteArray_anabcLcLFeatureVectorlE8gR(void *p) {
+      delete [] ((::anab::FeatureVector<8>*)p);
+   }
+   static void destruct_anabcLcLFeatureVectorlE8gR(void *p) {
+      typedef ::anab::FeatureVector<8> current_t;
+      ((current_t*)p)->~current_t();
+   }
+} // end of namespace ROOT for class ::anab::FeatureVector<8>
+
+namespace ROOT {
+   // Wrappers around operator new
+   static void *new_anabcLcLMVADescriptionlE8gR(void *p) {
+      return  p ? ::new((::ROOT::Internal::TOperatorNewHelper*)p) ::anab::MVADescription<8> : new ::anab::MVADescription<8>;
+   }
+   static void *newArray_anabcLcLMVADescriptionlE8gR(Long_t nElements, void *p) {
+      return p ? ::new((::ROOT::Internal::TOperatorNewHelper*)p) ::anab::MVADescription<8>[nElements] : new ::anab::MVADescription<8>[nElements];
+   }
+   // Wrapper around operator delete
+   static void delete_anabcLcLMVADescriptionlE8gR(void *p) {
+      delete ((::anab::MVADescription<8>*)p);
+   }
+   static void deleteArray_anabcLcLMVADescriptionlE8gR(void *p) {
+      delete [] ((::anab::MVADescription<8>*)p);
+   }
+   static void destruct_anabcLcLMVADescriptionlE8gR(void *p) {
+      typedef ::anab::MVADescription<8> current_t;
+      ((current_t*)p)->~current_t();
+   }
+} // end of namespace ROOT for class ::anab::MVADescription<8>
+
+namespace {
+  void TriggerDictionaryInitialization_MyDict_Impl() {
+    static const char* headers[] = {
+"classes.h",
+nullptr
+    };
+    static const char* includePaths[] = {
+"/cvmfs/larsoft.opensciencegrid.org/products/root/v6_26_06b/Linux64bit+3.10-2.17-e26-p3913-prof/include/",
+"/exp/dune/data/users/tstokes/DUNE_Software/srcs/larrecodnn/larrecodnn/NuGraph/",
+nullptr
+    };
+    static const char* fwdDeclCode = R"DICTFWDDCLS(
+#line 1 "MyDict dictionary forward declarations' payload"
+#pragma clang diagnostic ignored "-Wkeyword-compat"
+#pragma clang diagnostic ignored "-Wignored-attributes"
+#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
+extern int __Cling_AutoLoading_Map;
+)DICTFWDDCLS";
+    static const char* payloadCode = R"DICTPAYLOAD(
+#line 1 "MyDict dictionary payload"
+
+
+#define _BACKWARD_BACKWARD_WARNING_H
+// Inline headers
+#include "classes.h"
+
+#undef  _BACKWARD_BACKWARD_WARNING_H
+)DICTPAYLOAD";
+    static const char* classesHeaders[] = {
+"anab::FeatureVector<8>", payloadCode, "@",
+"anab::MVADescription<8>", payloadCode, "@",
+nullptr
+};
+    static bool isInitialized = false;
+    if (!isInitialized) {
+      TROOT::RegisterModule("MyDict",
+        headers, includePaths, payloadCode, fwdDeclCode,
+        TriggerDictionaryInitialization_MyDict_Impl, {}, classesHeaders, /*hasCxxModule*/false);
+      isInitialized = true;
+    }
+  }
+  static struct DictInit {
+    DictInit() {
+      TriggerDictionaryInitialization_MyDict_Impl();
+    }
+  } __TheDictionaryInitializer;
+}
+void TriggerDictionaryInitialization_MyDict() {
+  TriggerDictionaryInitialization_MyDict_Impl();
+}

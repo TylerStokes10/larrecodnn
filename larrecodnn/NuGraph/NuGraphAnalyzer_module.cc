@@ -1,11 +1,5 @@
-////////////////////////////////////////////////////////////////////////
-// Class:       NuGraphAnalyzer
-// Plugin Type: analyzer (Unknown Unknown)
-// File:        NuGraphAnalyzer_module.cc
-//
-// Generated at Mon Nov 20 13:42:17 2023 by Giuseppe Cerati using cetskelgen
-// from  version .
-////////////////////////////////////////////////////////////////////////
+#include <vector>
+#include <iostream>
 
 #include "art/Framework/Core/EDAnalyzer.h"
 #include "art/Framework/Core/ModuleMacros.h"
@@ -17,7 +11,7 @@
 #include "fhiclcpp/ParameterSet.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
-// saving output
+// For ROOT output
 #include "TTree.h"
 #include "art_root_io/TFileService.h"
 
@@ -25,78 +19,88 @@
 #include "lardataobj/AnalysisBase/MVAOutput.h"
 #include "lardataobj/RecoBase/Hit.h"
 
-class NuGraphAnalyzer;
-
 using std::vector;
 
 class NuGraphAnalyzer : public art::EDAnalyzer {
 public:
-  explicit NuGraphAnalyzer(fhicl::ParameterSet const& p);
-  // The compiler-generated destructor is fine for non-base
-  // classes without bare pointers or other resource use.
-
-  // Plugins should not be copied or assigned.
-  NuGraphAnalyzer(NuGraphAnalyzer const&) = delete;
-  NuGraphAnalyzer(NuGraphAnalyzer&&) = delete;
-  NuGraphAnalyzer& operator=(NuGraphAnalyzer const&) = delete;
-  NuGraphAnalyzer& operator=(NuGraphAnalyzer&&) = delete;
-
-  // Required functions.
-  void analyze(art::Event const& e) override;
+    explicit NuGraphAnalyzer(fhicl::ParameterSet const& p);
+    void analyze(art::Event const& e) override;
 
 private:
-  // Declare member data here.
-  TTree* _tree;
-  int _run, _subrun, _event, _id;
-  float _x_filter, _MIP, _HIP, _shower, _michel, _diffuse;
+    TTree* _eventTree;
+    TTree* _hitTree;
+    int _run, _subrun, _event;
+    float _nu, _pdk;  // Event-level data
+    int _id;
+    float _pion, _muon, _kaon, _hadron, _shower, _michel, _diffuse;  // Hit-level data
 };
 
-NuGraphAnalyzer::NuGraphAnalyzer(fhicl::ParameterSet const& p) : EDAnalyzer{p} // ,
-// More initializers here.
-{
-  // Call appropriate consumes<>() for any products to be retrieved by this module.
-  art::ServiceHandle<art::TFileService> tfs;
-  _tree = tfs->make<TTree>("NuGraphOutput", "NuGraphOutput");
-  _tree->Branch("run", &_run, "run/I");
-  _tree->Branch("subrun", &_subrun, "subrun/I");
-  _tree->Branch("event", &_event, "event/I");
-  _tree->Branch("id", &_id, "id/I");
-  _tree->Branch("x_filter", &_x_filter, "x_filter/F");
-  _tree->Branch("MIP", &_MIP, "MIP/F");
-  _tree->Branch("HIP", &_HIP, "HIP/F");
-  _tree->Branch("shower", &_shower, "shower/F");
-  _tree->Branch("michel", &_michel, "michel/F");
-  _tree->Branch("diffuse", &_diffuse, "diffuse/F");
+NuGraphAnalyzer::NuGraphAnalyzer(fhicl::ParameterSet const& p) : EDAnalyzer{p} {
+    art::ServiceHandle<art::TFileService> tfs;
+    _eventTree = tfs->make<TTree>("EventTree", "Event-level data");
+    _eventTree->Branch("run", &_run, "run/I");
+    _eventTree->Branch("subrun", &_subrun, "subrun/I");
+    _eventTree->Branch("event", &_event, "event/I");
+    _eventTree->Branch("nu", &_nu, "nu/F");
+    _eventTree->Branch("pdk", &_pdk, "pdk/F");
+
+    _hitTree = tfs->make<TTree>("HitTree", "Hit-level data");
+    _hitTree->Branch("id", &_id, "id/I");
+    _hitTree->Branch("pion", &_pion, "pion/F");
+    _hitTree->Branch("muon", &_muon, "muon/F");
+    _hitTree->Branch("kaon", &_kaon, "kaon/F");
+    _hitTree->Branch("hadron", &_hadron, "hadron/F");
+    _hitTree->Branch("shower", &_shower, "shower/F");
+    _hitTree->Branch("michel", &_michel, "michel/F");
+    _hitTree->Branch("diffuse", &_diffuse, "diffuse/F");
 }
 
-void NuGraphAnalyzer::analyze(art::Event const& e)
-{
-
-  art::Handle<anab::MVADescription<5>> GNNDescription;
-  e.getByLabel(art::InputTag("NuGraph", "semantic"), GNNDescription);
-
-  auto const& hitsWithScores = proxy::getCollection<std::vector<recob::Hit>>(
-    e,
-    GNNDescription->dataTag(), //tag of the hit collection we ran the GNN on
-    proxy::withParallelData<anab::FeatureVector<1>>(art::InputTag("NuGraph", "filter")),
-    proxy::withParallelData<anab::FeatureVector<5>>(art::InputTag("NuGraph", "semantic")));
-
-  std::cout << hitsWithScores.size() << std::endl;
-  for (auto& h : hitsWithScores) {
-    const auto& assocFilter = h.get<anab::FeatureVector<1>>();
-    const auto& assocSemantic = h.get<anab::FeatureVector<5>>();
-    _event = e.event();
-    _subrun = e.subRun();
+void NuGraphAnalyzer::analyze(art::Event const& e) {
+    _event = e.id().event();
+    _subrun = e.id().subRun();
     _run = e.run();
-    _id = h.index();
-    _x_filter = assocFilter.at(0);
-    _MIP = assocSemantic.at(GNNDescription->getIndex("MIP"));
-    _HIP = assocSemantic.at(GNNDescription->getIndex("HIP"));
-    _shower = assocSemantic.at(GNNDescription->getIndex("shower"));
-    _michel = assocSemantic.at(GNNDescription->getIndex("michel"));
-    _diffuse = assocSemantic.at(GNNDescription->getIndex("diffuse"));
-    _tree->Fill();
-  }
-}
+
+    art::Handle<std::vector<anab::FeatureVector<2>>> eventDataHandle;
+    e.getByLabel(art::InputTag("NuGraph", "event"), eventDataHandle);
+    if (eventDataHandle.isValid() && !eventDataHandle->empty()) {
+        _nu = eventDataHandle->at(0).at(1);
+        _pdk = eventDataHandle->at(0).at(0);
+    } else {
+        _nu = 0.0f;
+        _pdk = 0.0f;
+    }
+
+    // Fill event-level data only once per event
+    _eventTree->Fill();
+/*
+    art::Handle<anab::MVADescription<7>> GNNDescription;
+    e.getByLabel(art::InputTag("NuGraph", "semantic"), GNNDescription);
+    if (!GNNDescription.isValid()) {
+        mf::LogError("NuGraphAnalyzer") << "Failed to retrieve GNNDescription.";
+        return;
+    }
+
+    auto const& hitsWithScores = proxy::getCollection<std::vector<recob::Hit>>(
+        e,
+        GNNDescription->dataTag(),
+        proxy::withParallelData<anab::FeatureVector<7>>(art::InputTag("NuGraph", "semantic"))
+    );
+
+    for (auto& hit : hitsWithScores) {
+        _id = hit.index();
+        const auto& assocSemantic = hit.get<anab::FeatureVector<7>>();
+        _pion = assocSemantic.at(GNNDescription->getIndex("pion"));
+        _muon = assocSemantic.at(GNNDescription->getIndex("muon"));
+        _kaon = assocSemantic.at(GNNDescription->getIndex("kaon"));
+        _hadron = assocSemantic.at(GNNDescription->getIndex("hadron"));
+        _shower = assocSemantic.at(GNNDescription->getIndex("shower"));
+        _michel = assocSemantic.at(GNNDescription->getIndex("michel"));
+        _diffuse = assocSemantic.at(GNNDescription->getIndex("diffuse"));
+
+        // Fill hit-level data per hit
+        _hitTree->Fill();
+    }
+*/}
 
 DEFINE_ART_MODULE(NuGraphAnalyzer)
+

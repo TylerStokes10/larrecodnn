@@ -1,0 +1,20 @@
+<lcgdict>
+ <!-- Feature vectors, length 8 -->
+ <class name="anab::FeatureVector<8>" ClassVersion="10">
+  <version ClassVersion="10" checksum="514397341"/>
+ </class>
+ <class name="art::Wrapper< anab::FeatureVector<8>>"/>
+ <class name="std::vector< anab::FeatureVector<8>>"/>
+ <class name="art::Ptr< anab::FeatureVector<8>>"/>
+ <class name="art::Wrapper< std::vector< anab::FeatureVector<8>>>"/>
+
+ <!-- MVA output metadata, length 8 -->
+ <class name="anab::MVADescription<8>" ClassVersion="10">
+  <version ClassVersion="10" checksum="1525098356"/>
+ </class>
+ <class name="art::Wrapper< anab::MVADescription<8>>"/>
+ <class name="std::vector< anab::MVADescription<8>>"/>
+ <class name="art::Ptr< anab::MVADescription<8>>"/>
+ <class name="art::Wrapper< std::vector< anab::MVADescription<8>>>"/>
+</lcgdict>
+

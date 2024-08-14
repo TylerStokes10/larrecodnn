@@ -118,16 +118,13 @@ NuGraphInference::NuGraphInference(fhicl::ParameterSet const& p)
   if (filterDecoder) { produces<vector<FeatureVector<1>>>("filter"); }
   //
   if (semanticDecoder) {
-    produces<vector<FeatureVector<7>>>("semantic");
-    produces<MVADescription<7>>("semantic");
+    produces<vector<FeatureVector<8>>>("semantic");
+    produces<MVADescription<8>>("semantic");
   }
   //
   if (vertexDecoder) { produces<vector<recob::Vertex>>("vertex"); }
   //
-  if (eventDecoder) { 
-	  produces<vector<FeatureVector<2>>>("event"); 
-          produces<MVADescription<2>>("event");
-  }
+  if (eventDecoder) { produces<vector<FeatureVector<2>>>("event"); }
 
 
   cet::search_path sp("FW_SEARCH_PATH");
@@ -144,28 +141,16 @@ void NuGraphInference::produce(art::Event& e)
   std::unique_ptr<vector<FeatureVector<1>>> filtcol(
     new vector<FeatureVector<1>>(hitlist.size(), FeatureVector<1>(std::array<float, 1>({-1.}))));
 
-std::unique_ptr<vector<FeatureVector<2>>> eventcol(new vector<FeatureVector<2>>);
-
-
-/*    std::unique_ptr<vector<FeatureVector<2>>> eventcol(new vector<FeatureVector<2>>
-   (1, FeatureVector<2>(std::array<float, 2>({-1., -1.}))));
-*/
-/*
   std::unique_ptr<vector<FeatureVector<2>>> eventcol(new vector<FeatureVector<2>>(
     hitlist.size(), FeatureVector<2>(std::array<float, 2>({-1., -1.}))));
-  */  
- std::unique_ptr<MVADescription<2>> eventdes(
-    new MVADescription<2>("EventScores",
-                          "event",
-                          {"nu", "pdk"}));
+    
 
-  std::unique_ptr<vector<FeatureVector<7>>> semtcol(new vector<FeatureVector<7>>(
-    hitlist.size(), FeatureVector<7>(std::array<float, 7>({-1., -1., -1., -1., -1., -1., -1.}))));
-
- std::unique_ptr<MVADescription<7>> semtdes(
-    new MVADescription<7>(hitListHandle.provenance()->moduleLabel(),
-                          "semantic",
-                         {"pion", "muon", "kaon", "hadron", "shower", "michel", "diffuse"}));
+ std::unique_ptr<vector<FeatureVector<8>>> semtcol(new vector<FeatureVector<8>>(
+   hitlist.size(), FeatureVector<8>(std::array<float,8>({-1., -1., -1., -1., -1., -1., -1., -1.}))));
+ std::unique_ptr<MVADescription<8>> semtdes(
+   new MVADescription<8>(hitListHandle.provenance()->moduleLabel(),
+                         "semantic", 
+                         {"pion", "muon", "kaon", "hadron", "shower", "michel", "diffuse", "invisible"}));
 
   std::unique_ptr<vector<recob::Vertex>> vertcol(new vector<recob::Vertex>());
 
@@ -173,10 +158,7 @@ std::unique_ptr<vector<FeatureVector<2>>> eventcol(new vector<FeatureVector<2>>)
   if (hitlist.size() < minHits) {
     if (filterDecoder) { e.put(std::move(filtcol), "filter"); }
 
-    if (eventDecoder) {
-      e.put(std::move(eventcol), "event"); 
-      e.put(std::move(eventdes), "event");
-     } 
+    if (eventDecoder) { e.put(std::move(eventcol), "event"); } 
     
     if (semanticDecoder) {
       e.put(std::move(semtcol), "semantic");
@@ -213,17 +195,6 @@ std::unique_ptr<vector<FeatureVector<2>>> eventcol(new vector<FeatureVector<2>>)
     nodeft[h->View()].push_back((float)geo::vect::Zcoord(center));
     nodeft[h->View()].push_back(tpcgeom.DetectDriftDirection());
   }
-//////////////////////////////////////////////
-//debugging statement added here for nodeft == 0 error:
-size_t expected_feature_count = 8;  // Adjust this value based on the expected number of features
-for (size_t i = 0; i < planes.size(); i++) {
-    if (nodeft[i].empty()) {
-        nodeft[i] = std::vector<float>(expected_feature_count, 0.0f);  // Fill with 0.0f as placeholders
-        std::cout << "Filled empty nodeft vector for plane " << i << " with default values." << std::endl;
-    }
-}
-//////////////////////////////////////
-
 
   struct Edge {
     size_t n1;
@@ -239,28 +210,7 @@ for (size_t i = 0; i < planes.size(); i++) {
   vector<vector<Edge>> edge2d(planes.size(), vector<Edge>());
   for (size_t p = 0; p < planes.size(); p++) {
     if (debug) std::cout << "Plane " << p << " has N hits=" << coords[p].size() / 2 << std::endl;
-////////////////////////////////////////
-//debug statements made by Tyler Stokes
-    if (coords[p].size() / 2 < 3){
-        if (debug) std::cout << "Insufficient points for triangulation on plane " << p << std::endl;
- continue;
-}
-    std::set<std::pair<double, double>> unique_points;
-    for (size_t i = 0; i < coords[p].size(); i += 2) {
-        unique_points.emplace(coords[p][i], coords[p][i + 1]);
-    }
-    if (unique_points.size() < 3) {
-        if (debug) { 
-
-   std::cout << "Not enough unique points for triangulation on plane " << p << std::endl;
-for (const auto& pt : unique_points) {
-            std::cout << "Point: (" << pt.first << ", " << pt.second << ")" << std::endl;
-        }    
-}
-    continue;
-    }
-////////////////////////////////////
-try {
+    if (coords[p].size() / 2 < 3) continue;
     delaunator::Delaunator d(coords[p]);
     if (debug) std::cout << "Found N triangles=" << d.triangles.size() / 3 << std::endl;
     for (std::size_t i = 0; i < d.triangles.size(); i += 3) {
@@ -288,11 +238,6 @@ try {
       edge2d[p].push_back(e);
       //
     }
-}catch (const std::exception& e) {
-        std::cerr << "Triangulation failed for plane " << p << ": " << e.what() << std::endl;
-        continue;  // Skip this plane or handle differently
-    }
-
     //sort and cleanup duplicate edges
     std::sort(edge2d[p].begin(), edge2d[p].end(), [](const auto& i, const auto& j) {
       return (i.n1 != j.n1 ? i.n1 < j.n1 : i.n2 < j.n2);
@@ -314,13 +259,18 @@ try {
   }
 
   // Get spacepoints from the event record
+std::cout << "Using spsInput: " << spsInput << std::endl;
+std::cout << "Using spsolve: " << spsolve << std::endl;
+  
+
+
   art::Handle<vector<SpacePoint>> spListHandle;
   vector<art::Ptr<SpacePoint>> splist;
   if (e.getByLabel(spsInput, spListHandle)) { art::fill_ptr_vector(splist, spListHandle); }
   // Get assocations from spacepoints to hits
   vector<vector<art::Ptr<Hit>>> sp2Hit(splist.size());
   if (splist.size() > 0) {
-    art::FindManyP<Hit> fmp(spListHandle, e, "sps");
+    art::FindManyP<Hit> fmp(spListHandle, e, spsolve);
     for (size_t spIdx = 0; spIdx < sp2Hit.size(); ++spIdx) {
       sp2Hit[spIdx] = fmp.at(spIdx);
     }
@@ -341,38 +291,36 @@ try {
   auto x = torch::Dict<std::string, torch::Tensor>();
   auto batch = torch::Dict<std::string, torch::Tensor>();
   for (size_t p = 0; p < planes.size(); p++) {
-      long int dim = nodeft[p].size() / 8;
+    long int dim = nodeft[p].size() / 8;
     torch::Tensor ix = torch::zeros({dim, 8}, torch::dtype(torch::kFloat32));
     if (debug) {
       std::cout << "plane=" << p << std::endl;
       std::cout << std::fixed;
       std::cout << std::setprecision(4);
       std::cout << "before, plane=" << planes[p] << std::endl;
-      std::cout << "nodeft size: " << nodeft_bare[p].size() << std::endl;
       for (size_t n = 0; n < nodeft_bare[p].size(); n = n + 8) {
-        std::cout << nodeft_bare[p][n] << " " << nodeft_bare[p][n + 1] << " "
-                  << nodeft_bare[p][n + 2] << " " << nodeft_bare[p][n + 3] << " " 
-		  << nodeft_bare[p][n + 4] << " " << nodeft_bare[p][n + 5] << " "  
-		  << nodeft_bare[p][n + 6] << " " << nodeft_bare[p][n + 7] << " " << std::endl;
+      std::cout << nodeft_bare[p][n] << " " << nodeft_bare[p][n + 1] << " "
+                      << nodeft_bare[p][n + 2] << " " << nodeft_bare[p][n + 3] << " "
+                      << nodeft_bare[p][n + 4] << " " << nodeft_bare[p][n + 5] << " "
+                      << nodeft_bare[p][n + 6] << " " << nodeft_bare[p][n + 7] << " " << std::endl;
       }
       std::cout << std::scientific;
       std::cout << "after, plane=" << planes[p] << std::endl;
       for (size_t n = 0; n < nodeft[p].size(); n = n + 8) {
-        std::cout << nodeft[p][n] << " " << nodeft[p][n + 1] << " " << nodeft[p][n + 2] << " "
-                  << nodeft[p][n + 3] << " " << nodeft[p][n + 4] << " " << nodeft[p][n + 5] << " " 
-		  << nodeft[p][n + 6] << " " << nodeft[p][n + 7] << " " << std::endl;
+     std::cout << nodeft[p][n] << " " << nodeft[p][n + 1] << " " << nodeft[p][n + 2] << " "
+                      << nodeft[p][n + 3] << " " << nodeft[p][n + 4] << " " << nodeft[p][n + 5] << " "
+                      << nodeft[p][n + 6] << " " << nodeft[p][n + 7] << " " << std::endl;
       }
     }
     for (size_t n = 0; n < nodeft[p].size(); n = n + 8) {
-      ix[n / 8][0] = nodeft[p][n];
-      ix[n / 8][1] = nodeft[p][n + 1];
-      ix[n / 8][2] = nodeft[p][n + 2];
-      ix[n / 8][3] = nodeft[p][n + 3];
-      ix[n / 8][4] = nodeft[p][n + 4];
-      ix[n / 8][5] = nodeft[p][n + 5];
-      ix[n / 8][6] = nodeft[p][n + 6];
-      ix[n / 8][7] = nodeft[p][n + 7];
-
+        ix[n / 8][0] = nodeft[p][n];
+        ix[n / 8][1] = nodeft[p][n + 1];
+        ix[n / 8][2] = nodeft[p][n + 2];
+        ix[n / 8][3] = nodeft[p][n + 3];
+        ix[n / 8][4] = nodeft[p][n + 4];
+        ix[n / 8][5] = nodeft[p][n + 5];
+        ix[n / 8][6] = nodeft[p][n + 6];
+        ix[n / 8][7] = nodeft[p][n + 7];
     }
     x.insert(planes[p], ix);
     torch::Tensor ib = torch::zeros({dim}, torch::dtype(torch::kInt64));
@@ -445,19 +393,20 @@ try {
       torch::Tensor s = outputs.at("x_semantic").toGenericDict().at(planes[p]).toTensor();
       for (int i = 0; i < s.sizes()[0]; ++i) {
         size_t idx = idsmap[p][i];
-        std::array<float, 7> input({s[i][0].item<float>(),
+        std::array<float, 8> input({s[i][0].item<float>(),
                                     s[i][1].item<float>(),
                                     s[i][2].item<float>(),
                                     s[i][3].item<float>(),
                                     s[i][4].item<float>(),
-	                            s[i][5].item<float>(),
-				    s[i][6].item<float>()});
+                                    s[i][5].item<float>(),
+                                    s[i][6].item<float>(),
+                                    s[i][7].item<float>()});
         softmax(input);
-        FeatureVector<7> semt = FeatureVector<7>(input);
+        FeatureVector<8> semt = FeatureVector<8>(input);
         (*semtcol)[idx] = semt;
       }
       if (debug) {
-        for (int j = 0; j < 7; j++) {
+        for (int j = 0; j < 8; j++) {
           std::cout << "x_semantic category=" << j << " : ";
           for (size_t p = 0; p < planes.size(); p++) {
             torch::Tensor s = outputs.at("x_semantic").toGenericDict().at(planes[p]).toTensor();
@@ -469,8 +418,6 @@ try {
       }
     }
   }
-
-  if (debug) std::cout << "We made it here" << std::endl;
   if (filterDecoder) {
     for (size_t p = 0; p < planes.size(); p++) {
       torch::Tensor f = outputs.at("x_filter").toGenericDict().at(planes[p]).toTensor();
@@ -498,145 +445,16 @@ try {
     vpos[2] = v[2].item<float>();
     vertcol->push_back(recob::Vertex(vpos));
   }
- 
 if (eventDecoder) {
-    if (debug) {
-        std::cout << "are we alive??" << std::endl;
-        std::cout << "Available keys in outputs:" << std::endl;
-        for (const auto& kv : outputs) {
-            std::cout << kv.key().toStringRef() << " type: " << kv.value().tagKind() << std::endl;
-        }
+    torch::Tensor evt = outputs.at("x_event").toGenericDict().at(0).toTensor();
+    for (int i = 0; i < evt.sizes()[0]; ++i) {
+        std::array<float, 2> evt_input({evt[i][0].item<float>(), evt[i][1].item<float>()});
+        softmax(evt_input);
+        FeatureVector<2> evtt = FeatureVector<2>(evt_input); 
+        eventcol->push_back(evtt);
     }
-
-    if (!outputs.contains("x")) {
-        if (debug) std::cout << "'x' key not found in outputs." << std::endl;
-        return;  // Exit if no event data is available
-    }
-
-    try {
-        auto x_value = outputs.at("x");
-        if (x_value.isGenericDict()) {
-            auto x_dict = x_value.toGenericDict();
-            // Debug to understand the keys within the GenericDict
-            for (const auto& item : x_dict) {
-                std::cout << "Key in x GenericDict: " << item.key().toStringRef() << std::endl;
-              //  std::cout << "evt scores: " << evt[0][0] << " | " << evt[1][1] << std::end;
-              }
-
-            // Access the tensor using the key "evt"
-            if (x_dict.contains("evt")) {
-                torch::Tensor evt = x_dict.at("evt").toTensor();
-                for (int i = 0; i < evt.sizes()[0]; ++i) {
-               if (debug) { 
-                  std::cout << "evt scores: " << evt[i][0] << " | " << evt[i][1] << std::endl;
-                 }
-                       std::array<float, 2> evt_input({
-                        evt[i][0].item<float>(),
-                        evt[i][1].item<float>()
-                    });
-                    softmax(evt_input);
-                    FeatureVector<2> evtt = FeatureVector<2>(evt_input);
-                    if(debug) {
-std::cout << "evt_input: [" << evt_input[0] << ", " << evt_input[1] << "]" << std::endl;
-std::cout << "evt_input_sum: " << evt_input[0] + evt_input[1] << std::endl;
-                    
-                       }
-                    eventcol->push_back(evtt);
-                }
-                if (debug) {
-                    std::cout << "Contents of eventcol after push_back:" << std::endl;
-                    for (const auto& vec : *eventcol) {
-                        std::cout << "FeatureVector: [" << vec[0] << ", " << vec[1] << "]" << std::endl;
-                    }
-               }
-            } else {
-                if (debug) std::cout << "Expected tensor key 'evt' not found in x GenericDict." << std::endl;
-            }
-        } else {
-            if (debug) std::cout << "'x' contains an unexpected type." << std::endl;
-        }
-    } catch (const std::exception& e) {
-        if (debug) std::cout << "Error processing x: " << e.what() << std::endl;
-        return;  // Handle or log the error appropriately
-    }
+    e.put(std::move(eventcol), "event");
 }
- 
-/*
-if (eventDecoder) {
-       if (debug) std::cout << "are we alive??" << std::endl;
-   if (debug) {
-        std::cout << "Available keys in outputs:" << std::endl;
-        for (const auto& kv : outputs) {
-            std::cout << kv.key().toStringRef() << std::endl; // Print each key
-        }
-    }
- 
-
- if (!outputs.contains("x")) {
-        if (debug) std::cout << "'x' key not found in outputs." << std::endl;
-        return;  // Exit if no event data is available
-    }
-
-
-if (debug) {
-        std::cout << "Available keys in outputs:" << std::endl;
-        for (const auto& kv : outputs) {
-            std::cout << kv.key().toStringRef() << " type: " << kv.value().tagKind() << std::endl;
-        }
-    }
-
-    if (!outputs.contains("x")) {
-        if (debug) std::cout << "'x' key not found in outputs." << std::endl;
-        return;  // Exit if no event data is available
-    }
-
-    try {
-        auto x_value = outputs.at("x");
-        if (x_value.isTensor()) {
-            torch::Tensor evt = x_value.toTensor();
-            // Your tensor processing logic here
-            for (int i = 0; i < evt.sizes()[0]; ++i) {
-                std::array<float, 2> evt_input({
-                    evt[i][0].item<float>(),
-                    evt[i][1].item<float>()
-                });
-                softmax(evt_input);
-                FeatureVector<2> evtt = FeatureVector<2>(evt_input);
-                eventcol->push_back(evtt);
-            }
-        } else {
-            if (debug) std::cout << "'x' contains an unexpected type." << std::endl;
-        }
-    } catch (const std::exception& e) {
-        if (debug) std::cout << "Error processing x: " << e.what() << std::endl;
-        return;  // Handle or log the error appropriately
-    }
-}
-*/
-
-//       torch::Tensor evt = outputs.at("x").toGenericDict().at(0).toTensor();
-/*try{
-     torch::Tensor evt = outputs.at("x").toTensor();  
-     for (int i = 0; i < evt.sizes()[0]; ++i)
-       {
-    	   std::array<float, 2> evt_input({
-		evt[i][0].item<float>(),
-        	   evt[i][1].item<float>()
-          });
-
-           softmax(evt_input);
-	   FeatureVector<2> evtt = FeatureVector<2>(evt_input); 
-	   eventcol->push_back(evtt);
-       }
-  } catch (const std::exception& e) {
-        if (debug) std::cout << "Error processing x: " << e.what() << std::endl;
-        return;  // Handle or log the error appropriately
-    }
-   }
-*/
-
-
-
 
   if (filterDecoder) { e.put(std::move(filtcol), "filter"); }
   if (semanticDecoder) {
@@ -645,12 +463,7 @@ if (debug) {
   }
   if (vertexDecoder) { e.put(std::move(vertcol), "vertex"); }
 
-  if (eventDecoder)  {
-    e.put(std::move(eventcol), "event"); 
-    e.put(std::move(eventdes), "event");
-}
-
-
+  if (eventDecoder)  { e.put(std::move(eventcol), "event"); }
 
 }
 

@@ -1,6 +1,7 @@
 #include "nugraph.fcl"
-#include "reco_uboone_data_mcc9_8.fcl"
-#include "SpacePointSolver.fcl"
+#include "workflow_reco_dune10kt.fcl"
+#include "services_dune.fcl"
+#include "tools_dune.fcl"
 
 process_name: testinference
 
@@ -10,15 +11,32 @@ services:
   TimeTracker:           {}
   MemoryTracker:         {}
   RandomNumberGenerator: {}
-  @table::microboone_reco_data_services
+  @table::dunefd_1x2x6_reco_services
+  Geometry: @local::dune10kt_1x2x6_v4_geo
+
+  message: {
+    destinations: {
+      LogStandardOut: {
+        type: "cout"
+        threshold: "INFO"
+      }
+      LogDebugFile: {
+        type: "file"
+        threshold: "ERROR"
+        filename: "debug.log"
+      }
+    }
+    debugModules: []
+  }
 }
-services.DetectorClocksService.TrigModuleName: "triggersim"
-services.DetectorClocksService.TrigModuleName: "daq"
-services.SpaceCharge.EnableCorrSCE: true
-services.SpaceCharge.EnableSimEfieldSCE: true
-services.SpaceCharge.EnableSimSpatialSCE: true
-services.SpaceCharge.RepresentationType: "Voxelized_TH3"
-services.SpaceCharge.CalibrationInputFilename: "SpaceCharge/SCEoffsets_dataDriven_combined_bkwd_Jan18.root"
+
+#services.DetectorClocksService.TrigModuleName: "triggersim"
+#services.DetectorClocksService.TrigModuleName: "daq"
+#services.SpaceCharge.EnableCorrSCE: true
+#services.SpaceCharge.EnableSimEfieldSCE: true
+#services.SpaceCharge.EnableSimSpatialSCE: true
+#services.SpaceCharge.RepresentationType: "Voxelized_TH3"
+#services.SpaceCharge.CalibrationInputFilename: "SpaceCharge/SCEoffsets_dataDriven_combined_bkwd_Jan18.root"
 
 source:
 {
@@ -50,12 +68,13 @@ physics:
 
   producers:
   {
-    nuslhits: { module_type: "NuSliceHitsProducer" }
-    sps: @local::standard_spacepointsolver
+    #nuslhits: {module_type: "NuSliceHitsProducer" }
+    hitfd:   @local::dunefd_hitfinderfd
+    sps:  @local::standard_spacepointsolver
     NuGraph: @local::NuGraph
   }
 
- reco: [nuslhits, sps, NuGraph]
+ reco: [hitfd, sps, NuGraph]
  #ana:       [  ]
 
  trigger_paths:       [ reco ]
@@ -63,9 +82,9 @@ physics:
  end_paths:          [ streamROOT ]
 }
 
-physics.producers.sps.HitLabel: "nuslhits"
-physics.producers.sps.WireIntersectThreshold: 0.3
-physics.producers.sps.WireIntersectThresholdDriftDir: 0.3
+physics.producers.sps.HitLabel: "hitfd"
+#physics.producers.sps.WireIntersectThrieshold: 0.3
+#physics.producers.sps.WireIntersectThresholdDriftDir: 0.3
 
 #physics.producers.NuGraph.debug: true
 

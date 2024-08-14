@@ -1,0 +1,49 @@
+#include "nugraph.fcl"
+#include "workflow_reco_dune10kt.fcl"
+#include "services_dunefd_horizdrift_1x2x6.fcl"
+#include "tools_dune.fcl"
+
+
+process_name: testinference
+
+services:
+{
+  TFileService:          { fileName: "reco_hist.root" }
+  TimeTracker:           {}
+  MemoryTracker:         {}
+  RandomNumberGenerator: {}
+  @table::dunefd_1x2x6_reco_services
+  Geometry: @local::dune10kt_1x2x6_v4_geo
+}
+
+source:
+{
+  module_type: RootInput
+  maxEvents: 10
+}
+
+outputs:
+{
+ rootOutput:
+ {
+   module_type: RootOutput
+   dataTier: "reconstructed"
+   compressionLevel: 1
+   saveMemoryObjectThreshold: 0
+   fileName: "output_minimal.root"
+   fileProperties: {maxInputFiles: 1}
+   checkFileName: false
+   SelectEvents: []
+   outputCommands: ["keep *_*_*_*"]
+ }
+}
+
+physics:
+{
+  producers: {}
+  reco: []
+  trigger_paths: []
+  streamROOT: [rootOutput]
+  end_paths: [streamROOT]
+}
+
